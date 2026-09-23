@@ -136,12 +136,28 @@ function completeBehavior(behaviorId, quantity) {
   });
   const levelUps = addExp(gained.exp);
 
-  // 检测成就 / 称号（在等级/属性更新后判断）
-  const unlockedAchievements = checkAllUnlockable('achievement');
-  const unlockedTitles = checkAllUnlockable('title');
+  // 检测成就 / 称号（在等级/属性更新后判断）。
+  // 成就奖励的 EXP 可能再次触发升级 → 解锁更多成就/称号，循环直到无新解锁。
+  const unlockedAchievements = [];
+  const unlockedTitles = [];
+  const extraLevelUps = [];
+  for (let guard = 0; guard < 100; guard++) {
+    const a = checkAllUnlockable('achievement');
+    const t = checkAllUnlockable('title');
+    unlockedAchievements.push(...a.items);
+    unlockedTitles.push(...t.items);
+    extraLevelUps.push(...a.levelUps);
+    if (!a.items.length && !t.items.length) break;
+  }
 
   saveState();
-  return { gained, levelUps, unlockedAchievements, unlockedTitles, record };
+  return {
+    gained,
+    levelUps: levelUps.concat(extraLevelUps),
+    unlockedAchievements,
+    unlockedTitles,
+    record,
+  };
 }
 
 /**
@@ -267,19 +283,36 @@ function conditionText(cond) {
   }
 }
 
-/** 检查某类（achievement/title）全部条目，解锁满足条件的新条目并返回它们 */
+/**
+ * 解锁成就：标记解锁 + 按成就自身配置发放金币 / EXP（数字由用户设置）。
+ * 返回奖励 EXP 引发的升级列表。
+ */
+function grantAchievement(item, time) {
+  item.unlocked = true;
+  item.unlockedAt = time || Date.now();
+  const r = item.rewards || {};
+  state.player.coins += Number(r.coins) || 0;
+  return addExp(Number(r.exp) || 0);
+}
+
+/**
+ * 检查某类（achievement/title）全部条目，解锁满足条件的新条目。
+ * 成就解锁时同时发放其奖励。
+ * 返回 { items: 本次解锁条目, levelUps: 成就奖励引发的升级 }。
+ */
 function checkAllUnlockable(kind) {
   const list = kind === 'achievement' ? state.achievements : state.titles;
-  const newly = [];
+  const items = [];
+  const levelUps = [];
   list.forEach(item => {
     if (item.unlocked) return;
     if (conditionProgress(item.condition).done) {
-      item.unlocked = true;
-      item.unlockedAt = Date.now();
-      newly.push(item);
+      items.push(item);
+      if (kind === 'achievement') levelUps.push(...grantAchievement(item));
+      else { item.unlocked = true; item.unlockedAt = Date.now(); }
     }
   });
-  return newly;
+  return { items, levelUps };
 }
 
 /* ---------- 商店 ---------- */

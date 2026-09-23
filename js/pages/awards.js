@@ -76,6 +76,10 @@ Pages.awards = {
             <div class="award-name">${UI.esc(a.name)} ${a.unlocked ? '<span class="unlock-tag">已解锁</span>' : '<span class="lock-tag">🔒 未解锁</span>'}</div>
             ${a.description ? `<div class="award-desc">${UI.esc(a.description)}</div>` : ''}
             <div class="award-cond">${UI.esc(conditionText(a.condition))}</div>
+            <div class="award-reward-line">
+              🎁 奖励：<b class="ar-exp">+${fmtNum((a.rewards || {}).exp)} EXP</b>
+              <b class="ar-coin">+${fmtNum((a.rewards || {}).coins)} 🪙</b>
+            </div>
             <div class="award-progress">
               <div class="award-bar"><div class="award-fill" style="width:${pct}%"></div></div>
               <span class="award-nums">${fmtNum(prog.current)} / ${fmtNum(prog.target)}</span>
@@ -167,6 +171,19 @@ function openAwardForm(kind, itemId) {
         <div class="cond-desc" id="aw-cond-desc"></div>
       </div>
 
+      ${isAch ? `
+      <div class="field field-full">
+        <span class="field-label">解锁奖励（达成时自动发放，可都填 0）</span>
+        <div class="reward-row">
+          <label class="mini-field"><span>EXP</span>
+            <input type="number" class="input" id="aw-reward-exp" min="0" step="any" placeholder="0"
+              value="${item && item.rewards ? item.rewards.exp ?? '' : ''}"></label>
+          <label class="mini-field"><span>🪙 金币</span>
+            <input type="number" class="input" id="aw-reward-coins" min="0" step="any" placeholder="0"
+              value="${item && item.rewards ? item.rewards.coins ?? '' : ''}"></label>
+        </div>
+      </div>` : ''}
+
       <div class="field-full icon-picker-wrap">
         <span class="field-label">快捷图标</span>
         <div class="icon-grid"></div>
@@ -201,11 +218,32 @@ function openAwardForm(kind, itemId) {
             description: UI.$('#aw-desc', m).value.trim(),
             condition,
           };
-          if (item) { Object.assign(item, data); UI.toast(`${label}已保存`, 'success'); }
+          if (isAch) {
+            const rExp = Math.max(0, parseFloat(UI.$('#aw-reward-exp', m).value) || 0);
+            const rCoins = Math.max(0, parseFloat(UI.$('#aw-reward-coins', m).value) || 0);
+            data.rewards = { exp: rExp, coins: rCoins };
+          }
+          if (item) {
+            Object.assign(item, data);
+            UI.toast(`${label}已保存`, 'success');
+          }
           else {
             const entry = { id: uid(), ...data, unlocked: false, unlockedAt: null };
-            // 创建即满足条件则立刻解锁
-            if (conditionProgress(condition).done) { entry.unlocked = true; entry.unlockedAt = Date.now(); }
+            // 创建即满足条件则立刻解锁；成就同时发放奖励
+            if (conditionProgress(condition).done) {
+              if (isAch) {
+                const ups = grantAchievement(entry);
+                const rw = entry.rewards || {};
+                setTimeout(() => {
+                  UI.toast(`🏆 成就已解锁：${UI.esc(entry.icon)} ${UI.esc(entry.name)}` +
+                    (rw.exp || rw.coins ? `（+${fmtNum(rw.exp)} EXP +${fmtNum(rw.coins)} 🪙）` : ''), 'unlock', 3600);
+                  ups.forEach(([from, to], i) => setTimeout(() => UI.levelUpOverlay(from, to), 300 + i * 400));
+                }, 100);
+              } else {
+                entry.unlocked = true;
+                entry.unlockedAt = Date.now();
+              }
+            }
             list.push(entry);
             UI.toast(`${label}「${UI.esc(name)}」已创建`, 'success');
           }

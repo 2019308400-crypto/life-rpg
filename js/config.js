@@ -113,6 +113,7 @@ const CONFIG = {
         icon: '🌟',
         description: '第一次完成任意行为',
         condition: { type: 'total_completions', behaviorId: '', attribute: '', value: 1 },
+        rewards: { exp: 100, coins: 20 },
       },
       {
         id: 'ach_read10',
@@ -120,6 +121,7 @@ const CONFIG = {
         icon: '📚',
         description: '累计完成「阅读」10 次',
         condition: { type: 'total_count', behaviorId: 'bh_read', attribute: '', value: 10 },
+        rewards: { exp: 200, coins: 50 },
       },
       {
         id: 'ach_streak3',
@@ -127,6 +129,7 @@ const CONFIG = {
         icon: '🔥',
         description: '连续 3 天完成「跑步」',
         condition: { type: 'streak', behaviorId: 'bh_run', attribute: '', value: 3 },
+        rewards: { exp: 300, coins: 80 },
       },
     ],
 

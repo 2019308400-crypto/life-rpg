@@ -392,6 +392,12 @@ a { color: var(--cyan); text-decoration: none; }
 .equip-tag { font-size: 11px; color: #2b1d00; background: linear-gradient(135deg, var(--gold), #e09a20); padding: 2px 9px; border-radius: 999px; font-weight: 800; }
 .award-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 .award-cond { font-size: 12px; color: var(--cyan); margin-top: 4px; }
+.award-reward-line { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+.award-reward-line .ar-exp { color: var(--cyan); margin: 0 4px 0 6px; font-weight: 700; }
+.award-reward-line .ar-coin { color: var(--gold); font-weight: 700; }
+.reward-row { display: flex; gap: 10px; }
+.mini-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.mini-field > span { font-size: 12px; color: var(--text-dim); }
 .award-progress { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 .award-bar { flex: 1; max-width: 220px; height: 6px; background: rgba(0, 0, 0, .4); border-radius: 999px; overflow: hidden; }
 .award-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-2)); border-radius: 999px; transition: width .4s ease; }

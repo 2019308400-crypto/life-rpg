@@ -112,8 +112,11 @@ function showCompleteFeedback(result) {
   if (!result) return;
   UI.rewardToast(result.gained);
   const delay = 400;
-  result.unlockedAchievements.forEach((a, i) =>
-    setTimeout(() => UI.toast(`🏆 解锁成就：${UI.esc(a.icon)} ${UI.esc(a.name)}`, 'unlock', 3600), delay + i * 500));
+  result.unlockedAchievements.forEach((a, i) => {
+    const r = a.rewards || {};
+    const rewardTxt = (r.exp || r.coins) ? `  🎁 +${fmtNum(r.exp)} EXP +${fmtNum(r.coins)} 🪙` : '';
+    setTimeout(() => UI.toast(`🏆 解锁成就：${UI.esc(a.icon)} ${UI.esc(a.name)}${rewardTxt}`, 'unlock', 3600), delay + i * 500);
+  });
   const base = delay + result.unlockedAchievements.length * 500;
   result.unlockedTitles.forEach((t, i) =>
     setTimeout(() => UI.toast(`👑 获得称号：${UI.esc(t.icon)} ${UI.esc(t.name)}`, 'unlock', 3600), base + i * 500));

@@ -17,7 +17,7 @@ function defaultState() {
     categories: [],
     behaviors: [],
     history: [],      // 每次完成行为都独立保存"当时实际获得的奖励"，永不重算
-    achievements: [], // { id, name, icon, description, condition, unlocked, unlockedAt }
+    achievements: [], // { id, name, icon, description, condition, rewards:{exp,coins}, unlocked, unlockedAt }
     titles: [],       // { id, name, icon, description, condition, unlocked, unlockedAt }
     shopItems: [],
     purchases: [],    // { id, itemId, itemName, icon, price, time }
@@ -35,7 +35,8 @@ function buildSeededState() {
   }));
   s.shopItems = CONFIG.seed.shopItems.map(i => ({ ...i }));
   s.achievements = CONFIG.seed.achievements.map(a => ({
-    ...a, condition: { ...a.condition }, unlocked: false, unlockedAt: null,
+    ...a, condition: { ...a.condition }, rewards: { exp: 0, coins: 0, ...(a.rewards || {}) },
+    unlocked: false, unlockedAt: null,
   }));
   s.titles = CONFIG.seed.titles.map(t => ({
     ...t, condition: { ...t.condition }, unlocked: false, unlockedAt: null,
@@ -56,6 +57,11 @@ function loadState() {
     // 保证数组字段一定存在
     ['categories', 'behaviors', 'history', 'achievements', 'titles', 'shopItems', 'purchases']
       .forEach(k => { if (!Array.isArray(merged[k])) merged[k] = []; });
+    // 迁移：老成就补齐奖励字段
+    merged.achievements = merged.achievements.map(a => ({
+      ...a,
+      rewards: { exp: 0, coins: 0, ...((a && a.rewards) || {}) },
+    }));
     return merged;
   } catch (e) {
     console.error('读取存档失败，使用新存档', e);
