@@ -416,8 +416,22 @@ a { color: var(--cyan); text-decoration: none; }
 .di-coin { color: var(--gold); }
 
 .history-list { display: flex; flex-direction: column; gap: 10px; }
-.history-card { padding: 14px 16px; }
-.hc-main { display: flex; gap: 12px; align-items: center; }
+.history-card { padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+.hc-main { display: flex; gap: 12px; align-items: center; flex: 1; min-width: 0; }
+.hc-del {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  background: rgba(255, 107, 107, .08);
+  border: 1px solid rgba(255, 107, 107, .25);
+  border-radius: 10px;
+  color: #ff8a8a;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.hc-del:hover { background: rgba(255, 107, 107, .2); transform: scale(1.06); }
+.hc-del:active { transform: scale(.94); }
 .hc-icon {
   width: 42px; height: 42px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;

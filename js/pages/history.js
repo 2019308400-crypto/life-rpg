@@ -60,6 +60,7 @@ Pages.history = {
                   <div class="hc-gains">${UI.gainBadges(r.gained)}</div>
                 </div>
               </div>
+              <button class="hc-del" data-rid="${r.id}" title="撤回这条记录（扣回奖励）" aria-label="撤回">↩️</button>
             </div>`).join('') : UI.emptyState('📜', '还没有记录。完成一个行为试试！')}
         </div>
       </div>
@@ -70,6 +71,35 @@ Pages.history = {
       this.render(view);
     }));
     $('#btn-summary-modal').addEventListener('click', () => this.openDailySummaryModal());
+
+    // 撤回记录：二次确认 → 反向扣回奖励 → 刷新
+    UI.$$('.hc-del', view).forEach(btn => btn.addEventListener('click', async () => {
+      const rec = state.history.find(r => r.id === btn.dataset.rid);
+      if (!rec) return;
+      const g = rec.gained || {};
+      const msg = `撤回 <b>${UI.esc(rec.behaviorName)}</b>（${fmtNum(rec.quantity)} ${UI.esc(rec.unit || '')}）？` +
+        `<br><br>将扣回：${UI.gainBadges(g, { skipZero: false })}` +
+        `<br><br><span style="color:var(--text-dim,#999);font-size:13px">金币/属性不足时扣到 0，EXP 不足会降级。</span>`;
+      const ok = await UI.confirmDialog(msg, { okText: '确认撤回' });
+      if (!ok) return;
+      const res = removeRecord(rec.id);
+      if (!res) return;
+      this.render(view);
+
+      // 撤回反馈
+      const parts = [];
+      if (g.exp) parts.push(`<span class="rw rw-exp">-${fmtNum(g.exp)} EXP</span>`);
+      if (g.coins) parts.push(`<span class="rw rw-coin">-${fmtNum(g.coins)} 🪙</span>`);
+      CONFIG.attributes.forEach(a => {
+        if (g[a.key]) parts.push(`<span class="rw rw-attr" style="--rw-color:${a.color}">-${fmtNum(g[a.key])} ${a.icon}</span>`);
+      });
+      parts.push('已撤回');
+      if (res.levelDowns.length) {
+        const [from, to] = res.levelDowns[res.levelDowns.length - 1];
+        parts.push(`<b style="color:#ff9f43">Lv.${from} → Lv.${to}</b>`);
+      }
+      UI.toast(parts.join(''), 'reward', 3200);
+    }));
   },
 
   /** 每日总结弹窗（首页也可调用） */

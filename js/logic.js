@@ -52,6 +52,20 @@ function addExp(amount) {
   return levelUps;
 }
 
+/** 反向扣 EXP：EXP 不足时逐级降级（最低 Lv.1，EXP 归零）。返回降级列表 [ [from,to] ] */
+function removeExp(amount) {
+  const p = state.player;
+  p.exp -= amount;
+  const downs = [];
+  while (p.exp < 0 && p.level > 1) {
+    p.level -= 1;
+    p.exp += expToNext(p.level); // 退回上一级所需阈值
+    downs.push([p.level + 1, p.level]);
+  }
+  if (p.level === 1 && p.exp < 0) p.exp = 0;
+  return downs;
+}
+
 /* ---------- 奖励计算 ---------- */
 
 /**
@@ -128,6 +142,30 @@ function completeBehavior(behaviorId, quantity) {
 
   saveState();
   return { gained, levelUps, unlockedAchievements, unlockedTitles, record };
+}
+
+/**
+ * 撤回一条完成记录：按记录中"当时实际获得的奖励"反向扣回，并删除记录。
+ * 金币/属性不足时扣到 0；EXP 不足时逐级降级（最低 Lv.1）。
+ * 已解锁的成就/称号保留（成就一旦获得不回收）。
+ * 返回 { gained, levelDowns } 或 null。
+ */
+function removeRecord(recordId) {
+  const idx = state.history.findIndex(r => r.id === recordId);
+  if (idx === -1) return null;
+  const record = state.history[idx];
+  const gained = record.gained || {};
+  const p = state.player;
+
+  p.coins = Math.max(0, p.coins - (Number(gained.coins) || 0));
+  CONFIG.attributes.forEach(a => {
+    p.attributes[a.key] = Math.max(0, Math.round((p.attributes[a.key] - (gained[a.key] || 0)) * 10) / 10);
+  });
+  const levelDowns = removeExp(Number(gained.exp) || 0);
+
+  state.history.splice(idx, 1);
+  saveState();
+  return { gained, levelDowns };
 }
 
 /* ---------- 派生统计 ---------- */
