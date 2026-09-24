@@ -92,8 +92,7 @@ function mergeSeedDefaults(s) {
   };
 
   let changed = false;
-  if (mergeList(s.behaviors, CONFIG.seed.behaviors, 'behavior')) changed = true;
-  if (mergeList(s.shopItems, CONFIG.seed.shopItems, 'shop')) changed = true;
+  // 只对成就和称号做合并（行为/商品完全由用户自己做主，不追加种子项）
   if (mergeList(s.achievements, CONFIG.seed.achievements, 'achievement')) changed = true;
   if (mergeList(s.titles, CONFIG.seed.titles, 'title')) changed = true;
   return changed;
