@@ -75,10 +75,56 @@ Pages.home = {
         </button>
 
         <p class="home-hint">去 <a href="#/behavior">行为</a> 页面创建属于你的人生规则 —— 程序只提供引擎，内容由你决定。</p>
+
+        <!-- 备份 / 恢复 -->
+        <section class="card backup-card">
+          <h2>💾 存档管理</h2>
+          <p class="backup-tip">定期备份，防止浏览器数据被清空后丢失。</p>
+          <div class="backup-actions">
+            <button class="btn btn-ghost" id="btn-export">📤 导出备份</button>
+            <button class="btn btn-ghost" id="btn-import">📥 恢复存档</button>
+            <input type="file" id="import-file" accept="application/json,.json" hidden>
+          </div>
+        </section>
       </div>
     `;
 
     $('#btn-complete').addEventListener('click', () => openCompleteModal(null));
     $('#btn-daily-summary').addEventListener('click', () => Pages.history.openDailySummaryModal());
+
+    $('#btn-export').addEventListener('click', () => {
+      if (exportBackup()) {
+        UI.toast('✅ 备份已导出，请妥善保存文件', 'success');
+      } else {
+        UI.toast('⚠️ 备份失败，请重试', 'error');
+      }
+    });
+
+    const fileInput = $('#import-file');
+    $('#btn-import').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (!confirm('恢复将覆盖当前所有数据，确定继续吗？')) {
+        fileInput.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = importBackup(String(reader.result || ''));
+        if (res.ok) {
+          UI.toast('✅ ' + res.msg, 'success');
+          App.refresh();
+        } else {
+          UI.toast('⚠️ ' + res.msg, 'error');
+        }
+        fileInput.value = '';
+      };
+      reader.onerror = () => {
+        UI.toast('⚠️ 文件读取失败', 'error');
+        fileInput.value = '';
+      };
+      reader.readAsText(file);
+    });
   },
 };

@@ -306,6 +306,13 @@ a { color: var(--cyan); text-decoration: none; }
 
 .home-hint { margin-top: 18px; text-align: center; font-size: 13px; color: var(--text-faint); }
 
+/* 备份/恢复 */
+.backup-card { margin-top: 18px; }
+.backup-card h2 { margin: 0 0 8px; font-size: 16px; }
+.backup-tip { margin: 0 0 14px; font-size: 12px; color: var(--text-faint); }
+.backup-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.backup-actions .btn { flex: 1; min-width: 120px; }
+
 /* ================= 行为页 ================= */
 
 .behavior-list { display: flex; flex-direction: column; gap: 12px; }

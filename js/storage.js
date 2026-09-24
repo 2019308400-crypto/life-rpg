@@ -134,6 +134,66 @@ function saveState() {
   }
 }
 
+/* ---------- 备份 / 恢复 ---------- */
+
+/** 导出完整存档为 JSON 文件并触发下载 */
+function exportBackup() {
+  try {
+    const data = {
+      app: 'LIFE RPG',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      storageKey: CONFIG.storageKey,
+      state: state,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = dateKey().replace(/-/g, '');
+    a.href = url;
+    a.download = `life-rpg-backup-${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (e) {
+    console.error('备份失败', e);
+    return false;
+  }
+}
+
+/**
+ * 从备份 JSON 恢复存档。
+ * @param {string} jsonText
+ * @returns {{ok:boolean, msg:string}}
+ */
+function importBackup(jsonText) {
+  try {
+    const data = JSON.parse(jsonText);
+    // 兼容两种格式：直接是 state，或包装成 { state: ... }
+    const restored = data && data.state ? data.state : data;
+    if (!restored || typeof restored !== 'object' || !restored.player) {
+      return { ok: false, msg: '文件格式不正确：缺少 player 字段' };
+    }
+    // 用默认值补齐缺失字段，保证兼容
+    const def = defaultState();
+    const merged = { ...def, ...restored };
+    merged.player = { ...def.player, ...restored.player };
+    merged.player.attributes = { ...def.player.attributes, ...restored.player.attributes };
+    ['categories', 'behaviors', 'history', 'achievements', 'titles', 'shopItems', 'purchases']
+      .forEach(k => { if (!Array.isArray(merged[k])) merged[k] = []; });
+    // 覆盖当前 state 并保存
+    Object.keys(state).forEach(k => { delete state[k]; });
+    Object.assign(state, merged);
+    saveState();
+    return { ok: true, msg: '恢复成功' };
+  } catch (e) {
+    console.error('恢复失败', e);
+    return { ok: false, msg: '文件解析失败：' + e.message };
+  }
+}
+
 // 全局唯一状态（storage.js 先于其他业务脚本加载）
 let state = loadState();
 if (state.firstOpen) {
