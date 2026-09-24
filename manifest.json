@@ -1,0 +1,19 @@
+{
+  "name": "LIFE RPG",
+  "short_name": "LIFE RPG",
+  "description": "人生 RPG 游戏引擎 —— 创建行为、设置奖励、记录成长",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f0f1e",
+  "theme_color": "#0f0f1e",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

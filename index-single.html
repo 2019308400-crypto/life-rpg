@@ -1,0 +1,2549 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LIFE RPG</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+<style>
+/* ============================================================
+ * LIFE RPG - 样式：现代 RPG HUD + 简洁 Web App
+ * ============================================================ */
+
+:root {
+  --bg: #0b0d16;
+  --bg-2: #10131f;
+  --card: #161a2b;
+  --card-2: #1c2135;
+  --border: #272d4a;
+  --border-light: #343c63;
+  --text: #e8ebf5;
+  --text-dim: #8a93b2;
+  --text-faint: #5a6284;
+  --gold: #f0b840;
+  --gold-2: #ffd977;
+  --purple: #8b5cf6;
+  --cyan: #5cc8ff;
+  --green: #4ade80;
+  --red: #ff5c7a;
+  --exp-grad: linear-gradient(90deg, #5cc8ff, #8b5cf6);
+  --shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  --radius: 14px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(139, 92, 246, .12), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(92, 200, 255, .08), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a { color: var(--cyan); text-decoration: none; }
+
+/* ================= 布局 ================= */
+
+#app { display: flex; min-height: 100vh; }
+
+#sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(16, 19, 31, .85);
+  border-right: 1px solid var(--border);
+  padding: 20px 14px;
+  z-index: 10;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
+.brand-icon { font-size: 30px; filter: drop-shadow(0 0 8px rgba(240, 184, 64, .5)); }
+.brand-name { display: block; font-weight: 800; letter-spacing: 2px; font-size: 17px; }
+.brand-sub { display: block; font-size: 11px; color: var(--text-faint); letter-spacing: 1px; }
+
+#side-nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--text-dim);
+  font-weight: 600;
+  transition: all .18s ease;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(139, 92, 246, .18), rgba(92, 200, 255, .10));
+  border-color: var(--border-light);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--purple);
+}
+.nav-icon { font-size: 20px; }
+
+.side-footer { text-align: center; color: var(--text-faint); font-size: 12px; letter-spacing: 2px; }
+
+#main { flex: 1; min-width: 0; padding: 28px 32px 60px; }
+#page-view { max-width: 860px; margin: 0 auto; }
+
+#bottom-nav { display: none; }
+
+/* ================= 通用组件 ================= */
+
+.card {
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.page-head h1 { font-size: 24px; letter-spacing: 1px; }
+.head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* 按钮 */
+.btn {
+  border: 1px solid var(--border-light);
+  background: var(--card-2);
+  color: var(--text);
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  user-select: none;
+}
+.btn:hover { filter: brightness(1.15); }
+.btn:active { transform: scale(.96); }
+.btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 9px; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--purple), #6d4de0);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, .35);
+}
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #e09a20);
+  border-color: transparent;
+  color: #2b1d00;
+  box-shadow: 0 4px 14px rgba(240, 184, 64, .3);
+}
+.btn-danger { background: linear-gradient(135deg, #e0446a, #c22d54); border-color: transparent; }
+.btn-ghost { background: transparent; }
+.btn-disabled { opacity: .45; cursor: not-allowed; }
+.btn-disabled:active { transform: none; }
+
+/* 大号主行动按钮 */
+.btn-primary-big {
+  width: 100%;
+  margin-top: 16px;
+  padding: 18px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #5b3bd6 55%, #4f46e5);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: 0 8px 28px rgba(124, 58, 237, .45), inset 0 1px 0 rgba(255, 255, 255, .2);
+  transition: transform .12s ease, box-shadow .2s ease;
+  animation: pulse-glow 2.6s ease-in-out infinite;
+}
+.btn-primary-big:active { transform: scale(.97); }
+.big-icon { font-size: 24px; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 8px 28px rgba(124, 58, 237, .4), inset 0 1px 0 rgba(255, 255, 255, .2); }
+  50% { box-shadow: 0 8px 38px rgba(124, 58, 237, .65), inset 0 1px 0 rgba(255, 255, 255, .2); }
+}
+
+/* chips / tabs */
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.chip-row-scroll { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+.chip {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s ease;
+}
+.chip.active { border-color: var(--purple); color: var(--text); background: rgba(139, 92, 246, .18); }
+
+.tab-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.tab {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-dim);
+  padding: 11px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.tab.active { color: var(--text); border-color: var(--purple); background: rgba(139, 92, 246, .15); }
+.tab-count { font-size: 12px; color: var(--gold); margin-left: 4px; }
+
+/* 徽章 */
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin: 2px 4px 2px 0;
+  background: var(--card-2);
+  border: 1px solid var(--border-light);
+}
+.badge-exp { color: var(--cyan); border-color: rgba(92, 200, 255, .4); }
+.badge-coin { color: var(--gold); border-color: rgba(240, 184, 64, .4); }
+.badge-attr { color: var(--attr-color, var(--text)); border-color: var(--attr-color, var(--border-light)); }
+
+/* 空状态 */
+.empty-state { text-align: center; padding: 44px 20px; color: var(--text-dim); }
+.empty-icon { font-size: 44px; margin-bottom: 10px; opacity: .8; }
+.empty-text { font-size: 14px; }
+
+/* ================= 首页 ================= */
+
+.player-card { margin-bottom: 16px; }
+.player-top { display: flex; gap: 18px; align-items: center; }
+
+.avatar {
+  position: relative;
+  width: 86px; height: 86px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgba(139, 92, 246, .3), rgba(92, 200, 255, .1));
+  border: 2px solid var(--border-light);
+  border-radius: 20px;
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, .25);
+}
+.avatar-emoji { font-size: 44px; }
+.level-badge {
+  position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--gold), #e09a20);
+  color: #2b1d00;
+  font-size: 12px; font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(240, 184, 64, .45);
+  white-space: nowrap;
+}
+
+.player-info { flex: 1; min-width: 0; }
+.player-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.player-name { font-size: 19px; font-weight: 800; letter-spacing: 1px; }
+.title-chip {
+  font-size: 12px; font-weight: 700;
+  color: var(--gold-2);
+  background: rgba(240, 184, 64, .12);
+  border: 1px solid rgba(240, 184, 64, .4);
+  padding: 3px 10px; border-radius: 999px;
+}
+
+.exp-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.exp-bar {
+  flex: 1; height: 14px;
+  background: rgba(0, 0, 0, .4);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.exp-fill {
+  height: 100%;
+  background: var(--exp-grad);
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(92, 200, 255, .6);
+  transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+.exp-text { font-size: 12px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.coin-row { display: flex; }
+.coin-chip {
+  font-weight: 800; font-size: 15px;
+  color: var(--gold-2);
+  background: rgba(240, 184, 64, .1);
+  border: 1px solid rgba(240, 184, 64, .35);
+  padding: 5px 14px; border-radius: 999px;
+}
+.coin-chip-lg { font-size: 17px; }
+
+/* 属性卡片 */
+.attr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.attr-card { --attr-color: var(--cyan); padding: 14px; }
+.attr-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.attr-icon { font-size: 19px; }
+.attr-name { font-size: 12px; font-weight: 700; color: var(--text-dim); letter-spacing: .5px; }
+.attr-value { font-size: 26px; font-weight: 800; color: var(--attr-color); font-variant-numeric: tabular-nums; text-shadow: 0 0 14px color-mix(in srgb, var(--attr-color) 55%, transparent); }
+.attr-bar { height: 6px; background: rgba(0, 0, 0, .4); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+.attr-fill { height: 100%; background: var(--attr-color); border-radius: 999px; transition: width .5s ease; box-shadow: 0 0 8px var(--attr-color); }
+.attr-milestone { font-size: 10px; color: var(--text-faint); margin-top: 5px; }
+
+/* 今日概况 */
+.today-card { margin-bottom: 4px; }
+.today-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.today-head h2 { font-size: 16px; }
+.today-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.today-item { background: rgba(0, 0, 0, .22); border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+.ti-label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+.ti-value { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ti-exp { color: var(--cyan); }
+.ti-coin { color: var(--gold); }
+
+.home-hint { margin-top: 18px; text-align: center; font-size: 13px; color: var(--text-faint); }
+
+/* ================= 行为页 ================= */
+
+.behavior-list { display: flex; flex-direction: column; gap: 12px; }
+.behavior-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.bc-main { display: flex; gap: 14px; align-items: center; flex: 1; min-width: 240px; }
+.bc-icon {
+  width: 52px; height: 52px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 27px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--border-light);
+  border-radius: 13px;
+}
+.bc-info { min-width: 0; }
+.bc-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bc-name { font-weight: 800; font-size: 16px; }
+.cat-tag {
+  font-size: 11px; font-weight: 700;
+  color: var(--cat-color, var(--text-dim));
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--border);
+  padding: 2px 9px; border-radius: 999px;
+}
+.bc-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.bc-rewards { font-size: 12.5px; margin-top: 6px; color: var(--text); }
+.bc-rule { color: var(--gold); font-weight: 700; margin-right: 6px; }
+.bc-actions { display: flex; gap: 8px; }
+
+/* ================= 商店 ================= */
+
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.shop-card { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+.shop-item-top { display: flex; gap: 12px; align-items: flex-start; }
+.shop-item-icon {
+  width: 48px; height: 48px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 25px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+}
+.shop-item-name { font-weight: 800; }
+.shop-item-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.shop-item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.shop-price { font-weight: 800; color: var(--gold); font-size: 16px; }
+.shop-item-actions { display: flex; gap: 6px; }
+
+.purchase-card h2 { font-size: 16px; margin-bottom: 12px; }
+.purchase-list { display: flex; flex-direction: column; gap: 8px; }
+.purchase-row {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(0, 0, 0, .2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.purchase-icon { font-size: 20px; }
+.purchase-info { flex: 1; display: flex; flex-direction: column; }
+.purchase-name { font-weight: 700; font-size: 14px; }
+.purchase-time { font-size: 11.5px; color: var(--text-faint); }
+.purchase-price { color: var(--red); font-weight: 800; white-space: nowrap; }
+
+/* ================= 成就 & 称号 ================= */
+
+.award-list { display: flex; flex-direction: column; gap: 12px; }
+.award-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.award-card.unlocked { border-color: rgba(240, 184, 64, .45); }
+.award-card.equipped { border-color: var(--gold); box-shadow: 0 0 18px rgba(240, 184, 64, .18), var(--shadow); }
+.award-main { display: flex; gap: 14px; align-items: center; flex: 1; min-width: 230px; }
+.award-icon {
+  width: 52px; height: 52px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--border-light);
+}
+.award-icon.glow { box-shadow: 0 0 16px rgba(240, 184, 64, .35); border-color: rgba(240, 184, 64, .5); }
+.award-icon.gray { filter: grayscale(1); opacity: .45; }
+.award-info { flex: 1; min-width: 0; }
+.award-name { font-weight: 800; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.unlock-tag { font-size: 11px; color: var(--green); border: 1px solid rgba(74, 222, 128, .45); padding: 1px 8px; border-radius: 999px; }
+.lock-tag { font-size: 11px; color: var(--text-faint); border: 1px solid var(--border); padding: 1px 8px; border-radius: 999px; }
+.equip-tag { font-size: 11px; color: #2b1d00; background: linear-gradient(135deg, var(--gold), #e09a20); padding: 2px 9px; border-radius: 999px; font-weight: 800; }
+.award-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.award-cond { font-size: 12px; color: var(--cyan); margin-top: 4px; }
+.award-progress { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.award-bar { flex: 1; max-width: 220px; height: 6px; background: rgba(0, 0, 0, .4); border-radius: 999px; overflow: hidden; }
+.award-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-2)); border-radius: 999px; transition: width .4s ease; }
+.award-nums { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.award-date { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+.award-actions { display: flex; gap: 6px; }
+.cond-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.cond-row .input { flex: 1; min-width: 120px; }
+.cond-desc { font-size: 12px; color: var(--text-faint); margin-top: 6px; }
+
+/* ================= 历史 ================= */
+
+.daily-card { margin-bottom: 16px; }
+.daily-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.daily-head h2 { font-size: 16px; }
+.daily-date { font-size: 12px; color: var(--text-faint); font-weight: 400; margin-left: 6px; }
+.daily-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.daily-item { background: rgba(0, 0, 0, .22); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
+.di-label { display: block; font-size: 11.5px; color: var(--text-dim); margin-bottom: 3px; }
+.di-value { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.di-exp { color: var(--cyan); }
+.di-coin { color: var(--gold); }
+
+.history-list { display: flex; flex-direction: column; gap: 10px; }
+.history-card { padding: 14px 16px; }
+.hc-main { display: flex; gap: 12px; align-items: center; }
+.hc-icon {
+  width: 42px; height: 42px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+.hc-name-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.hc-name { font-weight: 800; }
+.hc-qty { font-size: 12.5px; color: var(--text-dim); }
+.hc-time { font-size: 11.5px; color: var(--text-faint); margin-top: 1px; }
+.hc-gains { margin-top: 6px; }
+
+/* ================= 弹窗 ================= */
+
+.modal-mask {
+  position: fixed; inset: 0;
+  background: rgba(5, 6, 12, .7);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity .2s ease;
+  overflow-y: auto;
+}
+.modal-mask.show { opacity: 1; }
+
+.modal {
+  width: 100%; max-width: 460px;
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid var(--border-light);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+  transform: translateY(14px) scale(.97);
+  transition: transform .2s ease;
+  max-height: calc(100vh - 36px);
+  display: flex; flex-direction: column;
+  margin: auto;
+}
+.modal-mask.show .modal { transform: translateY(0) scale(1); }
+.modal-wide { max-width: 620px; }
+
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 17px; font-weight: 800; letter-spacing: .5px; }
+.modal-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 8px;
+}
+.modal-close:hover { background: var(--card); color: var(--text); }
+.modal-body { padding: 18px 20px; overflow-y: auto; }
+.modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--border); }
+.modal-foot .btn { min-width: 96px; }
+.confirm-msg { font-size: 14.5px; }
+.confirm-msg small { color: var(--text-dim); }
+
+/* 表单 */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field-full { grid-column: 1 / -1; }
+.field-label { font-size: 12.5px; color: var(--text-dim); font-weight: 700; }
+.input {
+  width: 100%;
+  background: rgba(0, 0, 0, .3);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(139, 92, 246, .18); }
+select.input { appearance: auto; }
+.input::placeholder { color: var(--text-faint); }
+
+.radio-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.radio-card {
+  display: flex; flex-direction: column; gap: 3px;
+  background: rgba(0, 0, 0, .25);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.radio-card.active { border-color: var(--purple); background: rgba(139, 92, 246, .13); }
+.radio-card input { display: none; }
+.rc-name { font-size: 13.5px; font-weight: 800; }
+.rc-desc { font-size: 11px; color: var(--text-faint); }
+
+.reward-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.icon-picker-wrap { display: flex; flex-direction: column; gap: 6px; }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 5px; max-height: 118px; overflow-y: auto; }
+.icon-cell {
+  background: rgba(0, 0, 0, .25);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 19px;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: all .12s ease;
+}
+.icon-cell:hover { background: var(--card-2); }
+.icon-cell.active { border-color: var(--gold); background: rgba(240, 184, 64, .14); }
+
+/* 完成行为弹窗 */
+.cb-info { display: flex; gap: 12px; align-items: center; background: rgba(0, 0, 0, .22); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+.cb-icon { font-size: 30px; }
+.cb-name { font-weight: 800; font-size: 16px; }
+.cb-rule { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.qty-row { display: flex; gap: 8px; align-items: stretch; }
+.qty-btn {
+  width: 46px; flex-shrink: 0;
+  background: var(--card-2); border: 1px solid var(--border-light);
+  color: var(--text); font-size: 19px; font-weight: 800;
+  border-radius: 10px; cursor: pointer;
+}
+.qty-btn:active { transform: scale(.94); }
+.qty-input { text-align: center; font-size: 19px; font-weight: 800; }
+.preview-box { background: rgba(92, 200, 255, .06); border: 1px dashed var(--border-light); border-radius: 12px; padding: 12px; margin-top: 14px; }
+.preview-title { font-size: 12px; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; }
+.preview-gains { font-size: 15px; font-weight: 800; }
+
+.rw { display: inline-block; margin-right: 12px; }
+.rw-exp { color: var(--cyan); text-shadow: 0 0 12px rgba(92, 200, 255, .5); }
+.rw-coin { color: var(--gold); }
+.rw-attr { color: var(--rw-color, var(--text)); }
+
+/* 行为选择器 */
+.picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 9px; }
+.picker-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: rgba(0, 0, 0, .22);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 14px 6px;
+  cursor: pointer;
+  color: var(--text);
+  transition: all .15s ease;
+}
+.picker-item:hover { border-color: var(--purple); background: rgba(139, 92, 246, .12); transform: translateY(-2px); }
+.picker-icon { font-size: 27px; }
+.picker-name { font-size: 13px; font-weight: 700; }
+.picker-cat { font-size: 10.5px; color: var(--text-faint); }
+
+/* 分类管理 */
+.cat-form { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.cat-form .input { flex: 1; min-width: 90px; }
+.cat-form .input:first-of-type { flex: 0 0 72px; text-align: center; }
+.cat-list { display: flex; flex-direction: column; gap: 8px; }
+.cat-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0, 0, 0, .2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+.cat-row-icon { font-size: 18px; }
+.cat-row-name { flex: 1; font-weight: 700; }
+
+/* 今日总结弹窗 */
+.summary-date { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+.summary-rows { display: flex; flex-direction: column; gap: 8px; }
+.summary-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(0, 0, 0, .2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 11px 15px;
+  font-size: 14px;
+}
+.summary-row.big { font-size: 16px; font-weight: 800; }
+.sv { font-weight: 800; font-variant-numeric: tabular-nums; }
+.sv-exp { color: var(--cyan); }
+.sv-coin { color: var(--gold); }
+.summary-hint { text-align: center; color: var(--text-faint); font-size: 13px; margin-top: 12px; }
+
+/* ================= Toast ================= */
+
+#toast-root {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  z-index: 200;
+  pointer-events: none;
+  width: max-content; max-width: 92vw;
+}
+.toast {
+  background: linear-gradient(180deg, #222845, #1a1f33);
+  border: 1px solid var(--border-light);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 11px 18px;
+  font-size: 14.5px;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: all .3s cubic-bezier(.22, 1, .36, 1);
+  max-width: 100%;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.hide { opacity: 0; transform: translateY(-10px); }
+.toast-success { border-color: rgba(74, 222, 128, .5); }
+.toast-error { border-color: rgba(255, 92, 122, .6); }
+.toast-reward { border-color: rgba(240, 184, 64, .55); font-size: 16px; }
+.toast-unlock { border-color: rgba(240, 184, 64, .7); background: linear-gradient(180deg, #3a3020, #241f14); color: var(--gold-2); }
+
+/* ================= LEVEL UP 全屏特效 ================= */
+
+.levelup-overlay {
+  position: fixed; inset: 0;
+  background: rgba(5, 6, 12, .82);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+  animation: lvl-in .35s cubic-bezier(.22, 1, .36, 1);
+}
+.levelup-overlay.fadeout { animation: lvl-out .6s ease forwards; }
+.levelup-box { text-align: center; position: relative; }
+.levelup-rays {
+  position: absolute; top: 50%; left: 50%;
+  width: 340px; height: 340px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(240, 184, 64, .28) 0%, transparent 62%);
+  border-radius: 50%;
+  animation: rays 2.2s ease-in-out infinite;
+}
+.levelup-title {
+  font-size: 58px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  background: linear-gradient(180deg, var(--gold-2), var(--gold), #d18f13);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 22px rgba(240, 184, 64, .55));
+  animation: lvl-pop .5s cubic-bezier(.34, 1.56, .64, 1);
+}
+.levelup-sub {
+  margin-top: 10px;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  text-shadow: 0 0 18px rgba(92, 200, 255, .6);
+  animation: lvl-pop .5s .12s cubic-bezier(.34, 1.56, .64, 1) backwards;
+}
+
+@keyframes lvl-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lvl-out { to { opacity: 0; } }
+@keyframes lvl-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes rays {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: .9; }
+  50% { transform: translate(-50%, -50%) scale(1.25); opacity: .5; }
+}
+
+/* ================= 入场动画 ================= */
+
+.anim-in > * { animation: card-in .4s cubic-bezier(.22, 1, .36, 1) backwards; }
+.anim-in > *:nth-child(1) { animation-delay: .02s; }
+.anim-in > *:nth-child(2) { animation-delay: .07s; }
+.anim-in > *:nth-child(3) { animation-delay: .12s; }
+.anim-in > *:nth-child(4) { animation-delay: .17s; }
+.anim-in > *:nth-child(5) { animation-delay: .22s; }
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= 响应式：手机 ================= */
+
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+
+  #app { flex-direction: column; }
+  #main { padding: 18px 14px calc(76px + env(safe-area-inset-bottom)); }
+
+  #bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(14, 17, 28, .96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    z-index: 50;
+  }
+  #bottom-nav .nav-item {
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 0;
+    border-radius: 10px;
+    text-align: center;
+  }
+  #bottom-nav .nav-icon { font-size: 21px; }
+  #bottom-nav .nav-label { font-size: 11px; }
+  #bottom-nav .nav-item.active { box-shadow: none; background: rgba(139, 92, 246, .15); }
+
+  .attr-grid { grid-template-columns: repeat(2, 1fr); }
+  .today-grid { grid-template-columns: repeat(3, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+  .radio-cards { grid-template-columns: 1fr; }
+  .reward-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-head h1 { font-size: 21px; }
+  .btn-primary-big { letter-spacing: 3px; }
+  .levelup-title { font-size: 44px; }
+}
+
+@media (max-width: 400px) {
+  .today-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 桌面侧边导航 -->
+  <aside id="sidebar">
+    <div class="brand">
+      <span class="brand-icon">⚔️</span>
+      <div class="brand-text">
+        <span class="brand-name">LIFE RPG</span>
+        <span class="brand-sub">我的人生游戏引擎</span>
+      </div>
+    </div>
+    <nav id="side-nav"></nav>
+    <div class="side-footer">V1.0</div>
+  </aside>
+
+  <!-- 主内容 -->
+  <main id="main">
+    <div id="page-view"></div>
+  </main>
+
+  <!-- 手机底部导航 -->
+  <nav id="bottom-nav"></nav>
+</div>
+
+<!-- 弹窗 / 提示 / 全屏特效 根节点 -->
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<div id="overlay-root"></div>
+
+<!-- 经典脚本按依赖顺序加载（支持 file:// 直接打开） -->
+
+<script>
+/* ============================================================
+ * LIFE RPG - 全局配置
+ * 所有"可以修改"的东西都集中在这里。
+ * 页面代码不会写死任何奖励数字，全部读取这里或用户自建数据。
+ * ============================================================ */
+
+const CONFIG = {
+  // localStorage 存储键
+  storageKey: 'life_rpg_save_v1',
+
+  /* ---------- 等级公式（集中管理，可自行调整成长速度） ----------
+   * 每级所需 EXP = round(base * growth ^ (level - 1))
+   * Lv.1→2 = 1000；Lv.2→3 = 1150；Lv.3→4 = 1323 ...
+   * 想改快慢：调 base（基础值）或 growth（每级倍率 1 = 不增长）
+   */
+  level: {
+    base: 1000,
+    growth: 1.15,
+    maxLevel: 999,
+  },
+
+  /* ---------- 四大属性（顺序即展示顺序） ----------
+   * milestone 仅为进度条展示用的参考值，可随意修改
+   */
+  attributes: [
+    { key: 'health',        name: 'Health',        zh: '体质', icon: '❤️', color: '#ff5c7a', milestone: 100 },
+    { key: 'intelligence',  name: 'Intelligence',  zh: '智力', icon: '🧠', color: '#5cc8ff', milestone: 100 },
+    { key: 'fitness',       name: 'Fitness',       zh: '体能', icon: '💪', color: '#ffc24b', milestone: 100 },
+    { key: 'discipline',    name: 'Discipline',    zh: '自律', icon: '🎯', color: '#b07cff', milestone: 100 },
+  ],
+
+  /* ---------- 奖励方式 ---------- */
+  rewardTypes: {
+    fixed:    { name: '固定奖励', desc: '每完成一次，获得固定奖励' },
+    per_unit: { name: '按数量',   desc: '按填写的数量计算，例如每 1 公里' },
+    per_time: { name: '按时间',   desc: '按记录的分钟数计算，例如每 30 分钟' },
+  },
+
+  /* ---------- 成就 / 称号 可用的条件类型 ---------- */
+  conditionTypes: {
+    first_complete:    { name: '第一次完成',   needs: ['behaviorId'],        desc: '第一次完成某个行为' },
+    total_count:       { name: '累计次数',     needs: ['behaviorId', 'value'], desc: '某行为累计完成 N 次' },
+    total_quantity:    { name: '累计数量',     needs: ['behaviorId', 'value'], desc: '某行为累计完成 N 个单位' },
+    total_completions: { name: '累计完成所有行为', needs: ['value'],          desc: '所有行为累计完成 N 次' },
+    level:             { name: '达到等级',     needs: ['value'],             desc: '玩家等级达到 Lv.N' },
+    attribute:         { name: '属性达到',     needs: ['attribute', 'value'], desc: '某项属性 ≥ N' },
+    streak:            { name: '连续天数',     needs: ['behaviorId', 'value'], desc: '连续 N 天完成某行为' },
+  },
+
+  /* ---------- 创建行为/商品时的快捷图标 ---------- */
+  iconPresets: [
+    '📖','🏃','🌙','💪','🧠','🎯','💧','🥗','⚽','🏀','🏊','🚴',
+    '✍️','💻','🎨','🎸','🎹','🧘','🛏️','🧹','📝','🗣️','🌍','🀄',
+    '🧋','🎬','🎮','🍰','☕','🎁','🛒','💰','⭐','🏆','👑','🔥',
+  ],
+
+  /* ---------- 首次打开时的示例内容（全部可编辑/删除/重建，只是模板） ---------- */
+  seed: {
+    categories: [
+      { id: 'cat_study',   name: '学习', icon: '📚' },
+      { id: 'cat_sport',   name: '运动', icon: '🏃' },
+      { id: 'cat_life',    name: '生活', icon: '🌙' },
+      { id: 'cat_work',    name: '工作', icon: '💼' },
+      { id: 'cat_hobby',   name: '兴趣', icon: '🎨' },
+      { id: 'cat_other',   name: '其他', icon: '📦' },
+    ],
+
+    behaviors: [
+      {
+        id: 'bh_read',
+        name: '阅读',
+        categoryId: 'cat_study',
+        icon: '📖',
+        description: '读书 / 学习资料',
+        unit: '分钟',
+        rewardType: 'per_time',
+        perTimeMinutes: 30,
+        rewards: { exp: 20, coins: 5, health: 0, intelligence: 1, fitness: 0, discipline: 0 },
+      },
+      {
+        id: 'bh_run',
+        name: '跑步',
+        categoryId: 'cat_sport',
+        icon: '🏃',
+        description: '户外跑 / 跑步机',
+        unit: '公里',
+        rewardType: 'per_unit',
+        perTimeMinutes: 30,
+        rewards: { exp: 20, coins: 5, health: 0, intelligence: 0, fitness: 1, discipline: 0 },
+      },
+      {
+        id: 'bh_sleep',
+        name: '早睡',
+        categoryId: 'cat_life',
+        icon: '🌙',
+        description: '23:30 前睡觉',
+        unit: '次',
+        rewardType: 'fixed',
+        perTimeMinutes: 30,
+        rewards: { exp: 30, coins: 10, health: 1, intelligence: 0, fitness: 0, discipline: 2 },
+      },
+    ],
+
+    shopItems: [
+      { id: 'sh_milktea', name: '喝奶茶', icon: '🧋', description: '一杯快乐水', price: 50 },
+      { id: 'sh_movie',   name: '看一场电影', icon: '🎬', description: '去电影院看一部想看的电影', price: 100 },
+    ],
+
+    achievements: [
+      {
+        id: 'ach_first',
+        name: '初来乍到',
+        icon: '🌟',
+        description: '第一次完成任意行为',
+        condition: { type: 'total_completions', behaviorId: '', attribute: '', value: 1 },
+      },
+      {
+        id: 'ach_read10',
+        name: '读书入门',
+        icon: '📚',
+        description: '累计完成「阅读」10 次',
+        condition: { type: 'total_count', behaviorId: 'bh_read', attribute: '', value: 10 },
+      },
+      {
+        id: 'ach_streak3',
+        name: '三日之约',
+        icon: '🔥',
+        description: '连续 3 天完成「跑步」',
+        condition: { type: 'streak', behaviorId: 'bh_run', attribute: '', value: 3 },
+      },
+    ],
+
+    titles: [
+      {
+        id: 'ti_newbie',
+        name: '初出茅庐',
+        icon: '🐣',
+        description: '等级达到 Lv.3',
+        condition: { type: 'level', behaviorId: '', attribute: '', value: 3 },
+      },
+      {
+        id: 'ti_learner',
+        name: '终身学习者',
+        icon: '🧠',
+        description: 'Intelligence ≥ 50',
+        condition: { type: 'attribute', behaviorId: '', attribute: 'intelligence', value: 50 },
+      },
+    ],
+  },
+};
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 数据存储
+ * 所有数据保存在浏览器 localStorage，刷新不丢失。
+ * ============================================================ */
+
+function defaultState() {
+  return {
+    version: 1,
+    player: {
+      level: 1,
+      exp: 0,
+      coins: 0,
+      attributes: { health: 0, intelligence: 0, fitness: 0, discipline: 0 },
+      titleId: null, // 当前佩戴的称号
+      createdAt: Date.now(),
+    },
+    categories: [],
+    behaviors: [],
+    history: [],      // 每次完成行为都独立保存"当时实际获得的奖励"，永不重算
+    achievements: [], // { id, name, icon, description, condition, unlocked, unlockedAt }
+    titles: [],       // { id, name, icon, description, condition, unlocked, unlockedAt }
+    shopItems: [],
+    purchases: [],    // { id, itemId, itemName, icon, price, time }
+    firstOpen: true,
+  };
+}
+
+/** 首次打开：写入种子示例数据（仅模板，用户可全部编辑/删除） */
+function buildSeededState() {
+  const s = defaultState();
+  s.categories = CONFIG.seed.categories.map(c => ({ ...c }));
+  s.behaviors = CONFIG.seed.behaviors.map(b => ({
+    ...b,
+    rewards: { ...b.rewards },
+  }));
+  s.shopItems = CONFIG.seed.shopItems.map(i => ({ ...i }));
+  s.achievements = CONFIG.seed.achievements.map(a => ({
+    ...a, condition: { ...a.condition }, unlocked: false, unlockedAt: null,
+  }));
+  s.titles = CONFIG.seed.titles.map(t => ({
+    ...t, condition: { ...t.condition }, unlocked: false, unlockedAt: null,
+  }));
+  return s;
+}
+
+/** 读取存档；缺失字段用默认值补齐（保证旧存档升级兼容） */
+function loadState() {
+  try {
+    const raw = localStorage.getItem(CONFIG.storageKey);
+    if (!raw) return buildSeededState();
+    const saved = JSON.parse(raw);
+    const def = defaultState();
+    const merged = { ...def, ...saved };
+    merged.player = { ...def.player, ...(saved.player || {}) };
+    merged.player.attributes = { ...def.player.attributes, ...((saved.player || {}).attributes || {}) };
+    // 保证数组字段一定存在
+    ['categories', 'behaviors', 'history', 'achievements', 'titles', 'shopItems', 'purchases']
+      .forEach(k => { if (!Array.isArray(merged[k])) merged[k] = []; });
+    return merged;
+  } catch (e) {
+    console.error('读取存档失败，使用新存档', e);
+    return buildSeededState();
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(CONFIG.storageKey, JSON.stringify(state));
+  } catch (e) {
+    console.error('保存失败', e);
+    if (typeof UI !== 'undefined' && UI.toast) UI.toast('⚠️ 保存失败：浏览器存储不可用', 'error');
+  }
+}
+
+// 全局唯一状态（storage.js 先于其他业务脚本加载）
+let state = loadState();
+if (state.firstOpen) {
+  state.firstOpen = false;
+  saveState();
+}
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 核心规则引擎
+ * 奖励计算 / 等级 / 条件判断 / 派生统计。
+ * 页面不写死任何数字，全部调用这里。
+ * ============================================================ */
+
+/* ---------- 通用工具 ---------- */
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+/** 本地日期键 YYYY-MM-DD（按用户时区，不用 UTC） */
+function dateKey(d) {
+  d = d || new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${dateKey(d)} ${hm}`;
+}
+
+/** 数字展示：整数直接显示，小数最多保留 1 位 */
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '0';
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : String(r);
+}
+
+/* ---------- 等级公式（读 CONFIG.level，可自行修改） ---------- */
+
+function expToNext(level) {
+  const { base, growth } = CONFIG.level;
+  return Math.round(base * Math.pow(growth, level - 1));
+}
+
+/** 返回 { levelUps: [ [from,to], ... ] }，会直接修改 player */
+function addExp(amount) {
+  const p = state.player;
+  p.exp += amount;
+  const levelUps = [];
+  while (p.level < CONFIG.level.maxLevel && p.exp >= expToNext(p.level)) {
+    p.exp -= expToNext(p.level);
+    const from = p.level;
+    p.level += 1;
+    levelUps.push([from, p.level]);
+  }
+  return levelUps;
+}
+
+/* ---------- 奖励计算 ---------- */
+
+/**
+ * 按行为配置计算实际奖励。
+ * fixed    : 直接取 rewards
+ * per_unit : rewards * quantity
+ * per_time : rewards * (minutes / perTimeMinutes)
+ * EXP/金币取整；属性保留 1 位小数。
+ */
+function calcGained(behavior, quantity) {
+  const q = Math.max(0, Number(quantity) || 0);
+  let factor = 1;
+  if (behavior.rewardType === 'per_unit') factor = q;
+  if (behavior.rewardType === 'per_time') {
+    const per = Math.max(1, Number(behavior.perTimeMinutes) || 30);
+    factor = q / per;
+  }
+  const roundAttr = v => Math.round(v * 10) / 10;
+  const r = behavior.rewards || {};
+  return {
+    exp: Math.round((Number(r.exp) || 0) * factor),
+    coins: Math.round((Number(r.coins) || 0) * factor),
+    health: roundAttr((Number(r.health) || 0) * factor),
+    intelligence: roundAttr((Number(r.intelligence) || 0) * factor),
+    fitness: roundAttr((Number(r.fitness) || 0) * factor),
+    discipline: roundAttr((Number(r.discipline) || 0) * factor),
+  };
+}
+
+/** 奖励预览文本行（不落库，仅展示） */
+function rewardSummary(behavior) {
+  const r = behavior.rewards || {};
+  const parts = [`EXP+${fmtNum(r.exp)}`, `🪙+${fmtNum(r.coins)}`];
+  CONFIG.attributes.forEach(a => {
+    const v = Number(r[a.key]) || 0;
+    if (v) parts.push(`${a.icon}+${fmtNum(v)}`);
+  });
+  return parts.join('  ');
+}
+
+/**
+ * 完成行为：写入独立历史记录（保存当时实际获得的奖励）、发放奖励、升级、检测成就/称号。
+ * 返回 { gained, levelUps, unlockedAchievements, unlockedTitles }
+ */
+function completeBehavior(behaviorId, quantity) {
+  const b = state.behaviors.find(x => x.id === behaviorId);
+  if (!b) return null;
+  const gained = calcGained(b, quantity);
+
+  const record = {
+    id: uid(),
+    behaviorId: b.id,
+    behaviorName: b.name, // 快照：删除模板后历史仍在
+    behaviorIcon: b.icon,
+    quantity: Number(quantity) || 0,
+    unit: b.unit || '',
+    rewardType: b.rewardType,
+    time: Date.now(),
+    gained, // ★ 保存当时实际获得的奖励，之后修改模板不影响
+  };
+  state.history.push(record);
+
+  // 发放奖励
+  const p = state.player;
+  p.coins += gained.coins;
+  CONFIG.attributes.forEach(a => {
+    p.attributes[a.key] = Math.round((p.attributes[a.key] + gained[a.key]) * 10) / 10;
+  });
+  const levelUps = addExp(gained.exp);
+
+  // 检测成就 / 称号（在等级/属性更新后判断）
+  const unlockedAchievements = checkAllUnlockable('achievement');
+  const unlockedTitles = checkAllUnlockable('title');
+
+  saveState();
+  return { gained, levelUps, unlockedAchievements, unlockedTitles, record };
+}
+
+/* ---------- 派生统计 ---------- */
+
+/** 今日汇总（从历史记录实时统计，天然与记录一致） */
+function todayStats() {
+  const today = dateKey();
+  const stats = { exp: 0, coins: 0, health: 0, intelligence: 0, fitness: 0, discipline: 0, completions: 0 };
+  state.history.forEach(r => {
+    if (dateKey(new Date(r.time)) !== today) return;
+    stats.exp += r.gained.exp;
+    stats.coins += r.gained.coins;
+    CONFIG.attributes.forEach(a => { stats[a.key] += r.gained[a.key] || 0; });
+    stats.completions += 1;
+  });
+  CONFIG.attributes.forEach(a => { stats[a.key] = Math.round(stats[a.key] * 10) / 10; });
+  return stats;
+}
+
+/** 某行为的累计次数 / 累计数量 */
+function behaviorStats(behaviorId) {
+  let count = 0, quantity = 0;
+  state.history.forEach(r => {
+    if (r.behaviorId !== behaviorId) return;
+    count += 1;
+    quantity += Number(r.quantity) || 0;
+  });
+  return { count, quantity: Math.round(quantity * 10) / 10 };
+}
+
+/** 所有行为累计完成总次数 */
+function totalCompletions() {
+  return state.history.length;
+}
+
+/**
+ * 某行为的连续天数：从今天（或昨天）往前数连续完成的天数。
+ * 今天没做不打断（还能补），连续断两天则归零。
+ */
+function streakOf(behaviorId) {
+  const days = new Set();
+  state.history.forEach(r => {
+    if (r.behaviorId === behaviorId) days.add(dateKey(new Date(r.time)));
+  });
+  if (days.size === 0) return 0;
+  const d = new Date();
+  const keyAt = dd => dateKey(dd);
+  if (!days.has(keyAt(d))) {
+    d.setDate(d.getDate() - 1); // 宽限：从昨天开始算
+    if (!days.has(keyAt(d))) return 0;
+  }
+  let streak = 0;
+  while (days.has(keyAt(d))) {
+    streak += 1;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+/* ---------- 条件判断（成就 / 称号共用） ---------- */
+
+function conditionProgress(cond) {
+  const c = cond || {};
+  const val = Number(c.value) || 0;
+  let cur = 0;
+  switch (c.type) {
+    case 'first_complete':    cur = state.history.some(r => r.behaviorId === c.behaviorId) ? 1 : 0; break;
+    case 'total_count':       cur = behaviorStats(c.behaviorId).count; break;
+    case 'total_quantity':    cur = behaviorStats(c.behaviorId).quantity; break;
+    case 'total_completions': cur = totalCompletions(); break;
+    case 'level':             cur = state.player.level; break;
+    case 'attribute':         cur = state.player.attributes[c.attribute] || 0; break;
+    case 'streak':            cur = streakOf(c.behaviorId); break;
+    default: cur = 0;
+  }
+  return { current: cur, target: val, done: cur >= val };
+}
+
+function conditionText(cond) {
+  const c = cond || {};
+  const t = CONFIG.conditionTypes[c.type];
+  if (!t) return '未知条件';
+  const bName = id => {
+    const b = state.behaviors.find(x => x.id === id);
+    return b ? `「${b.name}」` : '已删除行为';
+  };
+  switch (c.type) {
+    case 'first_complete':    return `第一次完成 ${bName(c.behaviorId)}`;
+    case 'total_count':       return `${bName(c.behaviorId)} 累计 ${fmtNum(c.value)} 次`;
+    case 'total_quantity':    return `${bName(c.behaviorId)} 累计 ${fmtNum(c.value)} 单位`;
+    case 'total_completions': return `累计完成任意行为 ${fmtNum(c.value)} 次`;
+    case 'level':             return `等级达到 Lv.${c.value}`;
+    case 'attribute': {
+      const a = CONFIG.attributes.find(x => x.key === c.attribute);
+      return `${a ? a.icon + ' ' + a.name : c.attribute} ≥ ${fmtNum(c.value)}`;
+    }
+    case 'streak':            return `连续 ${fmtNum(c.value)} 天完成 ${bName(c.behaviorId)}`;
+    default: return '未知条件';
+  }
+}
+
+/** 检查某类（achievement/title）全部条目，解锁满足条件的新条目并返回它们 */
+function checkAllUnlockable(kind) {
+  const list = kind === 'achievement' ? state.achievements : state.titles;
+  const newly = [];
+  list.forEach(item => {
+    if (item.unlocked) return;
+    if (conditionProgress(item.condition).done) {
+      item.unlocked = true;
+      item.unlockedAt = Date.now();
+      newly.push(item);
+    }
+  });
+  return newly;
+}
+
+/* ---------- 商店 ---------- */
+
+/** 购买商品：金币足够则扣款并保存消费记录；返回 { ok, reason } */
+function buyItem(itemId) {
+  const item = state.shopItems.find(x => x.id === itemId);
+  if (!item) return { ok: false, reason: '商品不存在' };
+  if (state.player.coins < item.price) return { ok: false, reason: '金币不足' };
+  state.player.coins -= item.price;
+  state.purchases.unshift({
+    id: uid(),
+    itemId: item.id,
+    itemName: item.name, // 快照
+    icon: item.icon,
+    price: item.price,
+    time: Date.now(),
+  });
+  saveState();
+  return { ok: true };
+}
+
+/* ---------- 数据保护 ---------- */
+
+/** 佩戴中的称号被删除后置空 */
+function cleanTitleRef() {
+  if (state.player.titleId && !state.titles.find(t => t.id === state.player.titleId)) {
+    state.player.titleId = null;
+  }
+}
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 通用 UI 组件
+ * 弹窗 / Toast / 确认框 / 升级特效 / 图标选择器 / 反馈动画
+ * ============================================================ */
+
+const UI = (() => {
+
+  /* ---------- 工具 ---------- */
+
+  /** HTML 转义（用户输入内容必须经过这里再插入 HTML） */
+  function esc(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+  /* ---------- Toast ---------- */
+
+  function toast(html, type = 'info', duration = 2600) {
+    const root = $('#toast-root');
+    if (!root) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = html;
+    root.appendChild(el);
+    // 触发入场动画
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      el.classList.add('hide');
+      setTimeout(() => el.remove(), 350);
+    }, duration);
+  }
+
+  /** 完成行为的奖励反馈：+30 EXP / +5 🪙 / +1 🧠 */
+  function rewardToast(gained) {
+    const parts = [];
+    if (gained.exp) parts.push(`<span class="rw rw-exp">+${fmtNum(gained.exp)} EXP</span>`);
+    if (gained.coins) parts.push(`<span class="rw rw-coin">+${fmtNum(gained.coins)} 🪙</span>`);
+    CONFIG.attributes.forEach(a => {
+      const v = gained[a.key];
+      if (v) parts.push(`<span class="rw rw-attr" style="--rw-color:${a.color}">+${fmtNum(v)} ${a.icon}</span>`);
+    });
+    if (!parts.length) parts.push('<span class="rw">完成！</span>');
+    toast(parts.join(''), 'reward', 3000);
+  }
+
+  /* ---------- 确认框（Promise 风格） ---------- */
+
+  function confirmDialog(message, { danger = true, okText = '删除' } = {}) {
+    return new Promise(resolve => {
+      openModal({
+        title: danger ? '⚠️ 确认操作' : '确认操作',
+        content: `<p class="confirm-msg">${message}</p>`,
+        actions: [
+          { label: '取消', class: 'btn-ghost', onClick: () => { closeModal(); resolve(false); } },
+          { label: okText, class: danger ? 'btn-danger' : 'btn-primary', onClick: () => { closeModal(); resolve(true); } },
+        ],
+      });
+    });
+  }
+
+  /* ---------- 弹窗 ---------- */
+
+  /**
+   * openModal({ title, content(html), actions:[{label,class,onClick(modalEl)}], wide })
+   * 内容渲染后可对 modalEl 绑定事件。
+   */
+  function openModal({ title, content = '', actions = [], wide = false, onClose }) {
+    const root = $('#modal-root');
+    if (!root) return;
+    root.innerHTML = `
+      <div class="modal-mask" id="modal-mask">
+        <div class="modal ${wide ? 'modal-wide' : ''}" role="dialog">
+          <div class="modal-head">
+            <span class="modal-title">${title}</span>
+            <button class="modal-close" id="modal-close-btn">✕</button>
+          </div>
+          <div class="modal-body" id="modal-body">${content}</div>
+          ${actions.length ? `<div class="modal-foot" id="modal-foot"></div>` : ''}
+        </div>
+      </div>`;
+    const mask = $('#modal-mask');
+    requestAnimationFrame(() => mask.classList.add('show'));
+
+    const close = () => {
+      mask.classList.remove('show');
+      setTimeout(() => { root.innerHTML = ''; }, 200);
+      if (onClose) onClose();
+    };
+    UI._closeModal = close;
+
+    $('#modal-close-btn').addEventListener('click', close);
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+
+    const foot = $('#modal-foot');
+    actions.forEach(a => {
+      const btn = document.createElement('button');
+      btn.className = `btn ${a.class || 'btn-primary'}`;
+      btn.textContent = a.label;
+      btn.addEventListener('click', () => a.onClick ? a.onClick(mask, close) : close());
+      foot.appendChild(btn);
+    });
+    return mask;
+  }
+
+  function closeModal() {
+    if (typeof UI._closeModal === 'function') UI._closeModal();
+    UI._closeModal = null;
+  }
+
+  /* ---------- 全屏 LEVEL UP 特效 ---------- */
+
+  function levelUpOverlay(from, to) {
+    const root = $('#overlay-root');
+    if (!root) return;
+    const el = document.createElement('div');
+    el.className = 'levelup-overlay';
+    el.innerHTML = `
+      <div class="levelup-box">
+        <div class="levelup-rays"></div>
+        <div class="levelup-title">LEVEL UP!</div>
+        <div class="levelup-sub">Lv.${from} → Lv.${to}</div>
+      </div>`;
+    root.appendChild(el);
+    setTimeout(() => el.classList.add('fadeout'), 2200);
+    setTimeout(() => el.remove(), 2900);
+  }
+
+  /* ---------- 图标选择器 ---------- */
+
+  /** 在容器内生成 emoji 网格，点击写入 targetInput 并高亮 */
+  function iconPicker(containerHtml, targetInput) {
+    const grid = containerHtml.querySelector('.icon-grid');
+    if (!grid) return;
+    const sync = () => {
+      $('.icon-cell', grid).forEach(c =>
+        c.classList.toggle('active', c.textContent === targetInput.value));
+    };
+    grid.innerHTML = CONFIG.iconPresets.map(e =>
+      `<button type="button" class="icon-cell">${e}</button>`).join('');
+    grid.addEventListener('click', e => {
+      const cell = e.target.closest('.icon-cell');
+      if (!cell) return;
+      targetInput.value = cell.textContent;
+      sync();
+    });
+    targetInput.addEventListener('input', sync);
+    sync();
+  }
+
+  /* ---------- 通用小组件 ---------- */
+
+  function emptyState(icon, text) {
+    return `<div class="empty-state"><div class="empty-icon">${icon}</div><div class="empty-text">${esc(text)}</div></div>`;
+  }
+
+  /** 属性增益徽章列表（gained 对象 → 若干徽章） */
+  function gainBadges(gained, { skipZero = true } = {}) {
+    const parts = [];
+    if (gained.exp) parts.push(`<span class="badge badge-exp">EXP +${fmtNum(gained.exp)}</span>`);
+    if (gained.coins) parts.push(`<span class="badge badge-coin">🪙 +${fmtNum(gained.coins)}</span>`);
+    CONFIG.attributes.forEach(a => {
+      const v = gained[a.key];
+      if (!skipZero || v) parts.push(`<span class="badge badge-attr" style="--attr-color:${a.color}">${a.icon} +${fmtNum(v || 0)}</span>`);
+    });
+    return parts.join('');
+  }
+
+  return { esc, $, $, toast, rewardToast, confirmDialog, openModal, closeModal, levelUpOverlay, iconPicker, emptyState, gainBadges };
+})();
+
+// 全局暴露快捷选择器（供各页面直接使用 $ / $）
+const $ = UI.$;
+const $ = UI.$;
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 页面：首页
+ * 等级 / EXP / 金币 / 四属性 / 称号 / 今日概况 / 完成行为入口
+ * ============================================================ */
+
+Pages = window.Pages || {};
+Pages.home = {
+
+  render(view) {
+    cleanTitleRef();
+    const p = state.player;
+    const need = expToNext(p.level);
+    const pct = Math.min(100, (p.exp / need) * 100);
+    const today = todayStats();
+    const title = state.titles.find(t => t.id === p.titleId);
+
+    view.innerHTML = `
+      <div class="page anim-in">
+        <div class="page-head">
+          <h1>⚔️ 角色面板</h1>
+        </div>
+
+        <!-- 角色 HUD -->
+        <section class="card player-card">
+          <div class="player-top">
+            <div class="avatar">
+              <span class="avatar-emoji">🧙</span>
+              <span class="level-badge">Lv.${p.level}</span>
+            </div>
+            <div class="player-info">
+              <div class="player-name-row">
+                <span class="player-name">冒险者</span>
+                ${title ? `<span class="title-chip">${UI.esc(title.icon)} ${UI.esc(title.name)}</span>` : ''}
+              </div>
+              <div class="exp-row">
+                <div class="exp-bar"><div class="exp-fill" style="width:${pct}%"></div></div>
+                <span class="exp-text">${fmtNum(p.exp)} / ${fmtNum(need)} EXP</span>
+              </div>
+              <div class="coin-row"><span class="coin-chip">🪙 ${fmtNum(p.coins)}</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 四属性 -->
+        <section class="attr-grid">
+          ${CONFIG.attributes.map(a => {
+            const v = p.attributes[a.key] || 0;
+            const mpct = Math.min(100, (v / (a.milestone || 100)) * 100);
+            return `
+            <div class="card attr-card" style="--attr-color:${a.color}">
+              <div class="attr-head"><span class="attr-icon">${a.icon}</span><span class="attr-name">${a.name}</span></div>
+              <div class="attr-value">${fmtNum(v)}</div>
+              <div class="attr-bar"><div class="attr-fill" style="width:${mpct}%"></div></div>
+              <div class="attr-milestone">目标 ${a.milestone}</div>
+            </div>`;
+          }).join('')}
+        </section>
+
+        <!-- 今日概况 -->
+        <section class="card today-card">
+          <div class="today-head">
+            <h2>📅 今日战绩</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-daily-summary">今日总结</button>
+          </div>
+          <div class="today-grid">
+            <div class="today-item"><span class="ti-label">今日 EXP</span><span class="ti-value ti-exp">+${fmtNum(today.exp)}</span></div>
+            <div class="today-item"><span class="ti-label">今日金币</span><span class="ti-value ti-coin">+${fmtNum(today.coins)} 🪙</span></div>
+            <div class="today-item"><span class="ti-label">完成行为</span><span class="ti-value">${today.completions} 次</span></div>
+          </div>
+        </section>
+
+        <!-- 主行动按钮 -->
+        <button class="btn-primary-big" id="btn-complete">
+          <span class="big-icon">⚔️</span><span>完成行为</span>
+        </button>
+
+        <p class="home-hint">去 <a href="#/behavior">行为</a> 页面创建属于你的人生规则 —— 程序只提供引擎，内容由你决定。</p>
+      </div>
+    `;
+
+    $('#btn-complete').addEventListener('click', () => openCompleteModal(null));
+    $('#btn-daily-summary').addEventListener('click', () => Pages.history.openDailySummaryModal());
+  },
+};
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 页面：行为（App 核心）
+ * 行为 CRUD / 分类管理 / 完成行为（含奖励实时预览）
+ * openCompleteModal() 同时供首页调用
+ * ============================================================ */
+
+Pages = window.Pages || {};
+
+/* ================= 完成行为弹窗（首页 / 行为页共用） ================= */
+
+/** behaviorId 为空时先选行为，再进入数量填写 */
+function openCompleteModal(behaviorId) {
+  if (!state.behaviors.length) {
+    UI.toast('还没有任何行为，先去「行为」页创建一个吧', 'info');
+    location.hash = '#/behavior';
+    return;
+  }
+  if (!behaviorId) return openBehaviorPicker();
+  return openCompleteForm(behaviorId);
+}
+
+function openBehaviorPicker() {
+  const cats = state.categories;
+  const catOf = id => cats.find(c => c.id === id);
+  const content = `
+    <div class="picker-grid">
+      ${state.behaviors.map(b => {
+        const c = catOf(b.categoryId);
+        return `<button class="picker-item" data-id="${b.id}">
+          <span class="picker-icon">${UI.esc(b.icon || '⚡')}</span>
+          <span class="picker-name">${UI.esc(b.name)}</span>
+          ${c ? `<span class="picker-cat">${UI.esc(c.name)}</span>` : ''}
+        </button>`;
+      }).join('')}
+    </div>`;
+  const mask = UI.openModal({ title: '⚔️ 选择要完成的行为', content });
+  UI.$('.picker-item', mask).forEach(el =>
+    el.addEventListener('click', () => openCompleteForm(el.dataset.id)));
+}
+
+function openCompleteForm(behaviorId) {
+  const b = state.behaviors.find(x => x.id === behaviorId);
+  if (!b) return;
+  const isTime = b.rewardType === 'per_time';
+  const defaultQty = b.rewardType === 'fixed' ? 1 : (isTime ? 30 : 1);
+
+  const unitLabel = isTime ? '分钟' : (b.unit || '单位');
+  const perLabel = isTime ? `每 ${b.perTimeMinutes || 30} 分钟` :
+    b.rewardType === 'per_unit' ? `每 1 ${b.unit || '单位'}` : '固定奖励';
+
+  const content = `
+    <div class="complete-form">
+      <div class="cb-info">
+        <span class="cb-icon">${UI.esc(b.icon || '⚡')}</span>
+        <div>
+          <div class="cb-name">${UI.esc(b.name)}</div>
+          <div class="cb-rule">${perLabel} · ${UI.esc(rewardSummary(b))}</div>
+        </div>
+      </div>
+      <label class="field">
+        <span class="field-label">本次${isTime ? '用时' : '数量'}（${UI.esc(unitLabel)}）</span>
+        <div class="qty-row">
+          <button type="button" class="qty-btn" id="qty-minus">−</button>
+          <input type="number" id="qty-input" class="input qty-input" min="0" step="any" value="${defaultQty}">
+          <button type="button" class="qty-btn" id="qty-plus">＋</button>
+        </div>
+      </label>
+      <div class="preview-box">
+        <div class="preview-title">预计获得</div>
+        <div class="preview-gains" id="preview-gains"></div>
+      </div>
+    </div>`;
+
+  const mask = UI.openModal({
+    title: '⚔️ 完成行为',
+    content,
+    actions: [
+      { label: '取消', class: 'btn-ghost' },
+      { label: '完成！', class: 'btn-primary', onClick: (m, close) => {
+          const qty = parseFloat(UI.$('#qty-input', m).value);
+          if (isNaN(qty) || qty <= 0) { UI.toast('请输入大于 0 的数量', 'error'); return; }
+          const result = completeBehavior(behaviorId, qty);
+          close();
+          showCompleteFeedback(result);
+        } },
+    ],
+  });
+
+  const input = UI.$('#qty-input', mask);
+  const preview = UI.$('#preview-gains', mask);
+  const renderPreview = () => {
+    const qty = parseFloat(input.value);
+    const gained = calcGained(b, isNaN(qty) ? 0 : qty);
+    preview.innerHTML = UI.gainBadges(gained);
+  };
+  input.addEventListener('input', renderPreview);
+  UI.$('#qty-minus', mask).addEventListener('click', () => {
+    const step = isTime ? 5 : 1;
+    input.value = Math.max(0, (parseFloat(input.value) || 0) - step);
+    renderPreview();
+  });
+  UI.$('#qty-plus', mask).addEventListener('click', () => {
+    const step = isTime ? 5 : 1;
+    input.value = (parseFloat(input.value) || 0) + step;
+    renderPreview();
+  });
+  renderPreview();
+}
+
+/** 完成后的反馈：奖励 Toast → 成就/称号 → LEVEL UP 特效 → 刷新页面 */
+function showCompleteFeedback(result) {
+  if (!result) return;
+  UI.rewardToast(result.gained);
+  const delay = 400;
+  result.unlockedAchievements.forEach((a, i) =>
+    setTimeout(() => UI.toast(`🏆 解锁成就：${UI.esc(a.icon)} ${UI.esc(a.name)}`, 'unlock', 3600), delay + i * 500));
+  const base = delay + result.unlockedAchievements.length * 500;
+  result.unlockedTitles.forEach((t, i) =>
+    setTimeout(() => UI.toast(`👑 获得称号：${UI.esc(t.icon)} ${UI.esc(t.name)}`, 'unlock', 3600), base + i * 500));
+  const base2 = base + result.unlockedTitles.length * 500;
+  result.levelUps.forEach(([from, to], i) =>
+    setTimeout(() => UI.levelUpOverlay(from, to), base2 + i * 400));
+  if (typeof App !== 'undefined' && App.refresh) setTimeout(() => App.refresh(), 80);
+}
+
+/* ================= 行为页 ================= */
+
+Pages.behavior = {
+  filterCat: 'all',
+
+  render(view) {
+    const cats = state.categories;
+    const catOf = id => cats.find(c => c.id === id);
+
+    const list = state.behaviors.filter(b =>
+      this.filterCat === 'all' || b.categoryId === this.filterCat);
+
+    view.innerHTML = `
+      <div class="page anim-in">
+        <div class="page-head">
+          <h1>📜 行为</h1>
+          <div class="head-actions">
+            <button class="btn btn-ghost" id="btn-manage-cats">🏷️ 管理分类</button>
+            <button class="btn btn-primary" id="btn-new-behavior">＋ 新建行为</button>
+          </div>
+        </div>
+
+        <div class="chip-row">
+          <button class="chip ${this.filterCat === 'all' ? 'active' : ''}" data-cat="all">全部</button>
+          ${cats.map(c => `
+            <button class="chip ${this.filterCat === c.id ? 'active' : ''}" data-cat="${c.id}">
+              ${UI.esc(c.icon)} ${UI.esc(c.name)}
+            </button>`).join('')}
+        </div>
+
+        <div class="behavior-list">
+          ${list.length ? list.map(b => {
+            const c = catOf(b.categoryId);
+            const rt = CONFIG.rewardTypes[b.rewardType] || {};
+            const perLabel = b.rewardType === 'per_time' ? `每 ${b.perTimeMinutes || 30} 分钟`
+              : b.rewardType === 'per_unit' ? `每 1 ${UI.esc(b.unit || '单位')}` : '完成一次';
+            return `
+            <div class="card behavior-card" data-id="${b.id}">
+              <div class="bc-main">
+                <span class="bc-icon">${UI.esc(b.icon || '⚡')}</span>
+                <div class="bc-info">
+                  <div class="bc-name-row">
+                    <span class="bc-name">${UI.esc(b.name)}</span>
+                    ${c ? `<span class="cat-tag" style="--cat-color:${c.color || '#8a93b2'}">${UI.esc(c.icon)} ${UI.esc(c.name)}</span>` : '<span class="cat-tag">未分类</span>'}
+                  </div>
+                  ${b.description ? `<div class="bc-desc">${UI.esc(b.description)}</div>` : ''}
+                  <div class="bc-rewards"><span class="bc-rule">${perLabel}</span> ${UI.esc(rewardSummary(b))}</div>
+                </div>
+              </div>
+              <div class="bc-actions">
+                <button class="btn btn-primary btn-sm act-complete">⚔️ 完成</button>
+                <button class="btn btn-ghost btn-sm act-edit">✏️</button>
+                <button class="btn btn-ghost btn-sm act-del">🗑️</button>
+              </div>
+            </div>`;
+          }).join('') : UI.emptyState('📜', '还没有行为。点击「新建行为」，定义属于你的第一个人生规则吧！')}
+        </div>
+      </div>
+    `;
+
+    // 分类筛选
+    UI.$('.chip', view).forEach(ch => ch.addEventListener('click', () => {
+      this.filterCat = ch.dataset.cat;
+      this.render(view);
+    }));
+
+    $('#btn-new-behavior').addEventListener('click', () => openBehaviorForm(null));
+    $('#btn-manage-cats').addEventListener('click', () => openCategoryManager());
+
+    UI.$('.behavior-card', view).forEach(card => {
+      const id = card.dataset.id;
+      card.querySelector('.act-complete').addEventListener('click', () => openCompleteModal(id));
+      card.querySelector('.act-edit').addEventListener('click', () => openBehaviorForm(id));
+      card.querySelector('.act-del').addEventListener('click', async () => {
+        const b = state.behaviors.find(x => x.id === id);
+        const ok = await UI.confirmDialog(
+          `确定删除行为「${UI.esc(b.name)}」？<br><small>历史记录会保留，不会消失。</small>`);
+        if (!ok) return;
+        state.behaviors = state.behaviors.filter(x => x.id !== id);
+        saveState();
+        UI.toast(`已删除「${UI.esc(b.name)}」`, 'info');
+        App.refresh();
+      });
+    });
+  },
+};
+
+/* ================= 新建 / 编辑行为弹窗 ================= */
+
+function openBehaviorForm(behaviorId) {
+  const b = behaviorId ? state.behaviors.find(x => x.id === behaviorId) : null;
+  const r = (b && b.rewards) || { exp: 0, coins: 0, health: 0, intelligence: 0, fitness: 0, discipline: 0 };
+  const rt = b ? b.rewardType : 'fixed';
+
+  const attrField = a => `
+    <label class="field field-sm">
+      <span class="field-label">${a.icon} ${a.name}</span>
+      <input type="number" class="input" id="rw-${a.key}" min="0" step="any" value="${r[a.key] || 0}">
+    </label>`;
+
+  const content = `
+    <div class="form-grid">
+      <label class="field">
+        <span class="field-label">行为名称 *</span>
+        <input type="text" class="input" id="bh-name" maxlength="30" placeholder="例如：跑步" value="${UI.esc(b ? b.name : '')}">
+      </label>
+      <label class="field">
+        <span class="field-label">分类</span>
+        <select class="input" id="bh-category">
+          <option value="">未分类</option>
+          ${state.categories.map(c => `<option value="${c.id}" ${b && b.categoryId === c.id ? 'selected' : ''}>${UI.esc(c.icon)} ${UI.esc(c.name)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field">
+        <span class="field-label">图标（emoji）</span>
+        <input type="text" class="input" id="bh-icon" maxlength="4" placeholder="⚡" value="${UI.esc(b ? b.icon : '')}">
+      </label>
+      <label class="field">
+        <span class="field-label">单位（按数量/时间时展示用）</span>
+        <input type="text" class="input" id="bh-unit" maxlength="10" placeholder="例如：公里 / 分钟 / 次" value="${UI.esc(b ? b.unit : '')}">
+      </label>
+      <label class="field field-full">
+        <span class="field-label">描述（可选）</span>
+        <input type="text" class="input" id="bh-desc" maxlength="60" placeholder="简单描述这个行为" value="${UI.esc(b ? b.description : '')}">
+      </label>
+
+      <div class="field field-full">
+        <span class="field-label">奖励方式</span>
+        <div class="radio-cards">
+          ${Object.entries(CONFIG.rewardTypes).map(([k, v]) => `
+            <label class="radio-card ${rt === k ? 'active' : ''}">
+              <input type="radio" name="reward-type" value="${k}" ${rt === k ? 'checked' : ''}>
+              <span class="rc-name">${v.name}</span><span class="rc-desc">${v.desc}</span>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <label class="field field-full per-time-field" id="per-time-field" style="display:${rt === 'per_time' ? '' : 'none'}">
+        <span class="field-label">每多少分钟结算一轮奖励</span>
+        <input type="number" class="input" id="bh-per-time" min="1" step="1" value="${b && b.perTimeMinutes ? b.perTimeMinutes : 30}">
+      </label>
+
+      <div class="field field-full">
+        <span class="field-label">奖励设置（按上方方式结算）</span>
+        <div class="reward-grid">
+          <label class="field field-sm"><span class="field-label">⭐ EXP</span><input type="number" class="input" id="rw-exp" min="0" step="any" value="${r.exp || 0}"></label>
+          <label class="field field-sm"><span class="field-label">🪙 金币</span><input type="number" class="input" id="rw-coins" min="0" step="any" value="${r.coins || 0}"></label>
+          ${CONFIG.attributes.map(attrField).join('')}
+        </div>
+      </div>
+
+      <div class="icon-picker-wrap field-full">
+        <span class="field-label">快捷图标</span>
+        <div class="icon-grid"></div>
+      </div>
+    </div>`;
+
+  const mask = UI.openModal({
+    title: b ? '✏️ 编辑行为' : '✨ 新建行为',
+    content, wide: true,
+    actions: [
+      { label: '取消', class: 'btn-ghost' },
+      { label: b ? '保存修改' : '创建行为', class: 'btn-primary', onClick: (m, close) => {
+          const name = UI.$('#bh-name', m).value.trim();
+          if (!name) { UI.toast('行为名称不能为空', 'error'); return; }
+          const perTimeEl = UI.$('#bh-per-time', m);
+          const rewardType = m.querySelector('input[name="reward-type"]:checked').value;
+          const perTimeMinutes = Math.max(1, parseInt(perTimeEl.value, 10) || 30);
+          const rewards = {};
+          let numErr = false;
+          ['exp', 'coins', ...CONFIG.attributes.map(a => a.key)].forEach(k => {
+            const v = parseFloat(UI.$(`#rw-${k}`, m).value);
+            if (isNaN(v) || v < 0) numErr = true;
+            rewards[k] = isNaN(v) || v < 0 ? 0 : v;
+          });
+          if (numErr) { UI.toast('奖励数值不能为负数', 'error'); return; }
+          if (rewardType === 'per_time' && perTimeMinutes < 1) { UI.toast('按时间模式下，每轮分钟数至少为 1', 'error'); return; }
+
+          const data = {
+            name,
+            categoryId: UI.$('#bh-category', m).value,
+            icon: UI.$('#bh-icon', m).value.trim() || '⚡',
+            description: UI.$('#bh-desc', m).value.trim(),
+            unit: UI.$('#bh-unit', m).value.trim(),
+            rewardType,
+            perTimeMinutes,
+            rewards,
+          };
+          if (b) { Object.assign(b, data); UI.toast(`已保存「${UI.esc(name)}」`, 'success'); }
+          else { state.behaviors.push({ id: uid(), ...data }); UI.toast(`已创建「${UI.esc(name)}」`, 'success'); }
+          saveState();
+          close();
+          App.refresh();
+        } },
+    ],
+  });
+
+  // 奖励方式切换 → 显示/隐藏"每 N 分钟"
+  UI.$('input[name="reward-type"]', mask).forEach(radio =>
+    radio.addEventListener('change', () => {
+      UI.$('#per-time-field', mask).style.display = radio.value === 'per_time' ? '' : 'none';
+      UI.$('.radio-card', mask).forEach(c =>
+        c.classList.toggle('active', c.querySelector('input').checked));
+    }));
+  UI.iconPicker(mask, UI.$('#bh-icon', mask));
+}
+
+/* ================= 分类管理弹窗 ================= */
+
+function openCategoryManager() {
+  const renderList = mask => {
+    const listEl = UI.$('#cat-list', mask);
+    listEl.innerHTML = state.categories.length ? state.categories.map(c => `
+      <div class="cat-row" data-id="${c.id}">
+        <span class="cat-row-icon">${UI.esc(c.icon)}</span>
+        <span class="cat-row-name">${UI.esc(c.name)}</span>
+        <button class="btn btn-ghost btn-sm act-cat-edit">✏️</button>
+        <button class="btn btn-ghost btn-sm act-cat-del">🗑️</button>
+      </div>`).join('')
+      : UI.emptyState('🏷️', '暂无分类，在上方新建一个吧');
+    UI.$('.cat-row', listEl).forEach(row => {
+      const id = row.dataset.id;
+      row.querySelector('.act-cat-edit').addEventListener('click', () => {
+        const c = state.categories.find(x => x.id === id);
+        UI.$('#cat-name', mask).value = c.name;
+        UI.$('#cat-icon', mask).value = c.icon;
+        UI.$('#cat-form-id', mask).value = c.id;
+        UI.$('#cat-save-btn', mask).textContent = '保存修改';
+      });
+      row.querySelector('.act-cat-del').addEventListener('click', async () => {
+        const c = state.categories.find(x => x.id === id);
+        const used = state.behaviors.filter(b => b.categoryId === id).length;
+        const ok = await UI.confirmDialog(
+          `删除分类「${UI.esc(c.name)}」？${used ? `<br><small>有 ${used} 个行为将变为"未分类"。</small>` : ''}`);
+        if (!ok) return;
+        state.categories = state.categories.filter(x => x.id !== id);
+        saveState();
+        UI.toast(`已删除分类「${UI.esc(c.name)}」`, 'info');
+        renderList(mask);
+        App.refresh();
+      });
+    });
+  };
+
+  const mask = UI.openModal({
+    title: '🏷️ 管理分类',
+    content: `
+      <div class="cat-form">
+        <input type="hidden" id="cat-form-id" value="">
+        <input type="text" class="input" id="cat-icon" maxlength="4" placeholder="图标">
+        <input type="text" class="input" id="cat-name" maxlength="10" placeholder="分类名称">
+        <button class="btn btn-primary" id="cat-save-btn">＋ 新建分类</button>
+      </div>
+      <div class="cat-list" id="cat-list"></div>`,
+  });
+
+  UI.$('#cat-save-btn', mask).addEventListener('click', () => {
+    const idEl = UI.$('#cat-form-id', mask);
+    const name = UI.$('#cat-name', mask).value.trim();
+    if (!name) { UI.toast('请填写分类名称', 'error'); return; }
+    const icon = UI.$('#cat-icon', mask).value.trim() || '🏷️';
+    if (idEl.value) {
+      const c = state.categories.find(x => x.id === idEl.value);
+      if (c) { c.name = name; c.icon = icon; }
+      idEl.value = '';
+      UI.$('#cat-save-btn', mask).textContent = '＋ 新建分类';
+    } else {
+      state.categories.push({ id: uid(), name, icon });
+    }
+    saveState();
+    renderList(mask);
+    App.refresh();
+  });
+
+  renderList(mask);
+}
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 页面：商店
+ * 商品 CRUD / 金币购买 / 消费记录（内容全部由用户自建）
+ * ============================================================ */
+
+Pages = window.Pages || {};
+Pages.shop = {
+
+  render(view) {
+    const p = state.player;
+
+    view.innerHTML = `
+      <div class="page anim-in">
+        <div class="page-head">
+          <h1>🛒 商店</h1>
+          <div class="head-actions">
+            <span class="coin-chip coin-chip-lg">🪙 ${fmtNum(p.coins)}</span>
+            <button class="btn btn-primary" id="btn-new-item">＋ 新建商品</button>
+          </div>
+        </div>
+
+        <div class="shop-grid">
+          ${state.shopItems.length ? state.shopItems.map(item => {
+            const afford = p.coins >= item.price;
+            return `
+            <div class="card shop-card" data-id="${item.id}">
+              <div class="shop-item-top">
+                <span class="shop-item-icon">${UI.esc(item.icon || '🎁')}</span>
+                <div class="shop-item-info">
+                  <div class="shop-item-name">${UI.esc(item.name)}</div>
+                  ${item.description ? `<div class="shop-item-desc">${UI.esc(item.description)}</div>` : ''}
+                </div>
+              </div>
+              <div class="shop-item-bottom">
+                <span class="shop-price">🪙 ${fmtNum(item.price)}</span>
+                <div class="shop-item-actions">
+                  <button class="btn btn-ghost btn-sm act-item-edit">✏️</button>
+                  <button class="btn btn-ghost btn-sm act-item-del">🗑️</button>
+                  <button class="btn ${afford ? 'btn-gold' : 'btn-disabled'} btn-sm act-buy" ${afford ? '' : 'disabled'}>购买</button>
+                </div>
+              </div>
+            </div>`;
+          }).join('') : UI.emptyState('🛒', '商店是空的。创建一些奖励给自己吧，例如"喝奶茶" 50 金币。')}
+        </div>
+
+        <section class="card purchase-card">
+          <h2>🧾 消费记录</h2>
+          ${state.purchases.length ? `
+          <div class="purchase-list">
+            ${state.purchases.slice(0, 50).map(r => `
+              <div class="purchase-row">
+                <span class="purchase-icon">${UI.esc(r.icon || '🎁')}</span>
+                <div class="purchase-info">
+                  <span class="purchase-name">${UI.esc(r.itemName)}</span>
+                  <span class="purchase-time">${formatTime(r.time)}</span>
+                </div>
+                <span class="purchase-price">−${fmtNum(r.price)} 🪙</span>
+              </div>`).join('')}
+          </div>` : UI.emptyState('🧾', '还没有消费记录')}
+        </section>
+      </div>
+    `;
+
+    $('#btn-new-item').addEventListener('click', () => openShopItemForm(null));
+    UI.$('.shop-card', view).forEach(card => {
+      const id = card.dataset.id;
+      card.querySelector('.act-buy').addEventListener('click', async () => {
+        const item = state.shopItems.find(x => x.id === id);
+        const ok = await UI.confirmDialog(
+          `花费 <b>${fmtNum(item.price)} 🪙</b> 购买「${UI.esc(item.name)}」？`,
+          { danger: false, okText: '购买' });
+        if (!ok) return;
+        const res = buyItem(id);
+        if (res.ok) UI.toast(`🎉 已购买「${UI.esc(item.name)}」，好好享受！`, 'success');
+        else UI.toast(`⚠️ ${res.reason}`, 'error');
+        App.refresh();
+      });
+      card.querySelector('.act-item-edit').addEventListener('click', () => openShopItemForm(id));
+      card.querySelector('.act-item-del').addEventListener('click', async () => {
+        const item = state.shopItems.find(x => x.id === id);
+        const ok = await UI.confirmDialog(`确定删除商品「${UI.esc(item.name)}」？`);
+        if (!ok) return;
+        state.shopItems = state.shopItems.filter(x => x.id !== id);
+        saveState();
+        UI.toast('商品已删除', 'info');
+        App.refresh();
+      });
+    });
+  },
+};
+
+/* ================= 新建 / 编辑商品弹窗 ================= */
+
+function openShopItemForm(itemId) {
+  const item = itemId ? state.shopItems.find(x => x.id === itemId) : null;
+  const content = `
+    <div class="form-grid">
+      <label class="field">
+        <span class="field-label">商品名称 *</span>
+        <input type="text" class="input" id="sh-name" maxlength="30" placeholder="例如：喝奶茶" value="${UI.esc(item ? item.name : '')}">
+      </label>
+      <label class="field">
+        <span class="field-label">图标（emoji）</span>
+        <input type="text" class="input" id="sh-icon" maxlength="4" placeholder="🎁" value="${UI.esc(item ? item.icon : '')}">
+      </label>
+      <label class="field">
+        <span class="field-label">金币价格 *</span>
+        <input type="number" class="input" id="sh-price" min="1" step="1" placeholder="50" value="${item ? item.price : ''}">
+      </label>
+      <label class="field">
+        <span class="field-label">描述（可选）</span>
+        <input type="text" class="input" id="sh-desc" maxlength="60" placeholder="给自己的一点奖励" value="${UI.esc(item ? item.description : '')}">
+      </label>
+      <div class="field-full icon-picker-wrap">
+        <span class="field-label">快捷图标</span>
+        <div class="icon-grid"></div>
+      </div>
+    </div>`;
+
+  const mask = UI.openModal({
+    title: item ? '✏️ 编辑商品' : '✨ 新建商品',
+    content,
+    actions: [
+      { label: '取消', class: 'btn-ghost' },
+      { label: item ? '保存修改' : '创建商品', class: 'btn-primary', onClick: (m, close) => {
+          const name = UI.$('#sh-name', m).value.trim();
+          const price = parseInt(UI.$('#sh-price', m).value, 10);
+          if (!name) { UI.toast('商品名称不能为空', 'error'); return; }
+          if (isNaN(price) || price < 1) { UI.toast('价格至少为 1 金币', 'error'); return; }
+          const data = {
+            name,
+            icon: UI.$('#sh-icon', m).value.trim() || '🎁',
+            description: UI.$('#sh-desc', m).value.trim(),
+            price,
+          };
+          if (item) { Object.assign(item, data); UI.toast('商品已保存', 'success'); }
+          else { state.shopItems.push({ id: uid(), ...data }); UI.toast(`已上架「${UI.esc(name)}」`, 'success'); }
+          saveState();
+          close();
+          App.refresh();
+        } },
+    ],
+  });
+  UI.iconPicker(mask, UI.$('#sh-icon', mask));
+}
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 页面：成就 & 称号
+ * 两个独立系统，条件类型完全共用，内容由用户自建。
+ * ============================================================ */
+
+Pages = window.Pages || {};
+Pages.awards = {
+  tab: 'achievement', // 'achievement' | 'title'
+
+  render(view) {
+    cleanTitleRef();
+    view.innerHTML = `
+      <div class="page anim-in">
+        <div class="page-head">
+          <h1>🏆 成就 & 称号</h1>
+          <div class="head-actions">
+            <button class="btn btn-primary" id="btn-new-award">＋ 新建${this.tab === 'achievement' ? '成就' : '称号'}</button>
+          </div>
+        </div>
+
+        <div class="tab-row">
+          <button class="tab ${this.tab === 'achievement' ? 'active' : ''}" data-tab="achievement">🎖️ 成就 <span class="tab-count">${state.achievements.filter(a => a.unlocked).length}/${state.achievements.length}</span></button>
+          <button class="tab ${this.tab === 'title' ? 'active' : ''}" data-tab="title">👑 称号 <span class="tab-count">${state.titles.filter(t => t.unlocked).length}/${state.titles.length}</span></button>
+        </div>
+
+        <div class="award-list">${this.tab === 'achievement' ? this.renderAchievements() : this.renderTitles()}</div>
+      </div>
+    `;
+
+    UI.$('.tab', view).forEach(t => t.addEventListener('click', () => {
+      this.tab = t.dataset.tab;
+      this.render(view);
+    }));
+    $('#btn-new-award').addEventListener('click', () => openAwardForm(this.tab, null));
+
+    // 成就/称号卡片操作
+    UI.$('[data-award-id]', view).forEach(card => {
+      const kind = card.dataset.awardKind;
+      const id = card.dataset.awardId;
+      const list = kind === 'achievement' ? state.achievements : state.titles;
+      const item = list.find(x => x.id === id);
+      if (!item) return;
+      const editBtn = card.querySelector('.act-award-edit');
+      const delBtn = card.querySelector('.act-award-del');
+      if (editBtn) editBtn.addEventListener('click', () => openAwardForm(kind, id));
+      if (delBtn) delBtn.addEventListener('click', async () => {
+        const ok = await UI.confirmDialog(`确定删除「${UI.esc(item.name)}」？`);
+        if (!ok) return;
+        if (kind === 'achievement') state.achievements = state.achievements.filter(x => x.id !== id);
+        else state.titles = state.titles.filter(x => x.id !== id);
+        cleanTitleRef();
+        saveState();
+        UI.toast('已删除', 'info');
+        App.refresh();
+      });
+      const equipBtn = card.querySelector('.act-equip');
+      if (equipBtn) equipBtn.addEventListener('click', () => {
+        state.player.titleId = state.player.titleId === id ? null : id;
+        saveState();
+        UI.toast(state.player.titleId ? `👑 已佩戴「${UI.esc(item.name)}」` : '已卸下称号', 'success');
+        App.refresh();
+      });
+    });
+  },
+
+  renderAchievements() {
+    if (!state.achievements.length) return UI.emptyState('🎖️', '还没有成就。创建一个吧，例如"第一次完成任意行为"。');
+    return state.achievements.map(a => {
+      const prog = conditionProgress(a.condition);
+      const pct = Math.min(100, prog.target > 0 ? (prog.current / prog.target) * 100 : (prog.done ? 100 : 0));
+      return `
+      <div class="card award-card ${a.unlocked ? 'unlocked' : ''}" data-award-kind="achievement" data-award-id="${a.id}">
+        <div class="award-main">
+          <span class="award-icon ${a.unlocked ? 'glow' : 'gray'}">${UI.esc(a.icon || '🎖️')}</span>
+          <div class="award-info">
+            <div class="award-name">${UI.esc(a.name)} ${a.unlocked ? '<span class="unlock-tag">已解锁</span>' : '<span class="lock-tag">🔒 未解锁</span>'}</div>
+            ${a.description ? `<div class="award-desc">${UI.esc(a.description)}</div>` : ''}
+            <div class="award-cond">${UI.esc(conditionText(a.condition))}</div>
+            <div class="award-progress">
+              <div class="award-bar"><div class="award-fill" style="width:${pct}%"></div></div>
+              <span class="award-nums">${fmtNum(prog.current)} / ${fmtNum(prog.target)}</span>
+            </div>
+            ${a.unlocked ? `<div class="award-date">解锁于 ${formatTime(a.unlockedAt)}</div>` : ''}
+          </div>
+        </div>
+        <div class="award-actions">
+          <button class="btn btn-ghost btn-sm act-award-edit">✏️</button>
+          <button class="btn btn-ghost btn-sm act-award-del">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  renderTitles() {
+    if (!state.titles.length) return UI.emptyState('👑', '还没有称号。创建一个吧，例如"终身学习者：Intelligence ≥ 50"。');
+    return state.titles.map(t => {
+      const prog = conditionProgress(t.condition);
+      const equipped = state.player.titleId === t.id;
+      return `
+      <div class="card award-card ${t.unlocked ? 'unlocked' : ''} ${equipped ? 'equipped' : ''}" data-award-kind="title" data-award-id="${t.id}">
+        <div class="award-main">
+          <span class="award-icon ${t.unlocked ? 'glow' : 'gray'}">${UI.esc(t.icon || '👑')}</span>
+          <div class="award-info">
+            <div class="award-name">${UI.esc(t.name)}
+              ${equipped ? '<span class="equip-tag">当前佩戴</span>' : t.unlocked ? '<span class="unlock-tag">已获得</span>' : '<span class="lock-tag">🔒 未解锁</span>'}
+            </div>
+            ${t.description ? `<div class="award-desc">${UI.esc(t.description)}</div>` : ''}
+            <div class="award-cond">${UI.esc(conditionText(t.condition))}</div>
+            <div class="award-progress">
+              <div class="award-bar"><div class="award-fill" style="width:${Math.min(100, prog.target > 0 ? (prog.current / prog.target) * 100 : 0)}%"></div></div>
+              <span class="award-nums">${fmtNum(prog.current)} / ${fmtNum(prog.target)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="award-actions">
+          ${t.unlocked ? `<button class="btn ${equipped ? 'btn-ghost' : 'btn-primary'} btn-sm act-equip">${equipped ? '卸下' : '👑 佩戴'}</button>` : ''}
+          <button class="btn btn-ghost btn-sm act-award-edit">✏️</button>
+          <button class="btn btn-ghost btn-sm act-award-del">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  },
+};
+
+/* ================= 新建 / 编辑成就 / 称号弹窗 ================= */
+
+function openAwardForm(kind, itemId) {
+  const isAch = kind === 'achievement';
+  const list = isAch ? state.achievements : state.titles;
+  const item = itemId ? list.find(x => x.id === itemId) : null;
+  const cond = (item && item.condition) || { type: 'level', behaviorId: '', attribute: '', value: 1 };
+  const label = isAch ? '成就' : '称号';
+
+  const condNeeds = type => (CONFIG.conditionTypes[type] || { needs: [] }).needs;
+
+  const content = `
+    <div class="form-grid">
+      <label class="field">
+        <span class="field-label">${label}名称 *</span>
+        <input type="text" class="input" id="aw-name" maxlength="30" placeholder="例如：终身学习者" value="${UI.esc(item ? item.name : '')}">
+      </label>
+      <label class="field">
+        <span class="field-label">图标（emoji）</span>
+        <input type="text" class="input" id="aw-icon" maxlength="4" placeholder="${isAch ? '🎖️' : '👑'}" value="${UI.esc(item ? item.icon : '')}">
+      </label>
+      <label class="field field-full">
+        <span class="field-label">描述（可选）</span>
+        <input type="text" class="input" id="aw-desc" maxlength="60" placeholder="这个${label}的意义" value="${UI.esc(item ? item.description : '')}">
+      </label>
+
+      <div class="field field-full">
+        <span class="field-label">解锁条件</span>
+        <div class="cond-row">
+          <select class="input" id="aw-cond-type">
+            ${Object.entries(CONFIG.conditionTypes).map(([k, v]) =>
+              `<option value="${k}" ${cond.type === k ? 'selected' : ''}>${v.name}</option>`).join('')}
+          </select>
+          <select class="input" id="aw-cond-behavior" style="display:none">
+            <option value="">选择行为…</option>
+            ${state.behaviors.map(b => `<option value="${b.id}" ${cond.behaviorId === b.id ? 'selected' : ''}>${UI.esc(b.icon)} ${UI.esc(b.name)}</option>`).join('')}
+          </select>
+          <select class="input" id="aw-cond-attribute" style="display:none">
+            ${CONFIG.attributes.map(a => `<option value="${a.key}" ${cond.attribute === a.key ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+          </select>
+          <input type="number" class="input" id="aw-cond-value" min="1" step="any" placeholder="数值" value="${cond.value || ''}" style="display:none">
+        </div>
+        <div class="cond-desc" id="aw-cond-desc"></div>
+      </div>
+
+      <div class="field-full icon-picker-wrap">
+        <span class="field-label">快捷图标</span>
+        <div class="icon-grid"></div>
+      </div>
+    </div>`;
+
+  const mask = UI.openModal({
+    title: item ? `✏️ 编辑${label}` : `✨ 新建${label}`,
+    content,
+    actions: [
+      { label: '取消', class: 'btn-ghost' },
+      { label: item ? '保存修改' : `创建${label}`, class: 'btn-primary', onClick: (m, close) => {
+          const name = UI.$('#aw-name', m).value.trim();
+          if (!name) { UI.toast('名称不能为空', 'error'); return; }
+          const type = UI.$('#aw-cond-type', m).value;
+          const needs = condNeeds(type);
+          const condition = { type, behaviorId: '', attribute: '', value: 0 };
+          if (needs.includes('behaviorId')) {
+            const bid = UI.$('#aw-cond-behavior', m).value;
+            if (!bid) { UI.toast('该条件需要选择一个行为', 'error'); return; }
+            condition.behaviorId = bid;
+          }
+          if (needs.includes('attribute')) condition.attribute = UI.$('#aw-cond-attribute', m).value;
+          if (needs.includes('value')) {
+            const v = parseFloat(UI.$('#aw-cond-value', m).value);
+            if (isNaN(v) || v <= 0) { UI.toast('请填写大于 0 的数值', 'error'); return; }
+            condition.value = v;
+          }
+          const data = {
+            name,
+            icon: UI.$('#aw-icon', m).value.trim() || (isAch ? '🎖️' : '👑'),
+            description: UI.$('#aw-desc', m).value.trim(),
+            condition,
+          };
+          if (item) { Object.assign(item, data); UI.toast(`${label}已保存`, 'success'); }
+          else {
+            const entry = { id: uid(), ...data, unlocked: false, unlockedAt: null };
+            // 创建即满足条件则立刻解锁
+            if (conditionProgress(condition).done) { entry.unlocked = true; entry.unlockedAt = Date.now(); }
+            list.push(entry);
+            UI.toast(`${label}「${UI.esc(name)}」已创建`, 'success');
+          }
+          saveState();
+          close();
+          App.refresh();
+        } },
+    ],
+  });
+
+  const typeSel = UI.$('#aw-cond-type', mask);
+  const bSel = UI.$('#aw-cond-behavior', mask);
+  const aSel = UI.$('#aw-cond-attribute', mask);
+  const vInput = UI.$('#aw-cond-value', mask);
+  const descEl = UI.$('#aw-cond-desc', mask);
+
+  const sync = () => {
+    const needs = condNeeds(typeSel.value);
+    bSel.style.display = needs.includes('behaviorId') ? '' : 'none';
+    aSel.style.display = needs.includes('attribute') ? '' : 'none';
+    vInput.style.display = needs.includes('value') ? '' : 'none';
+    descEl.textContent = (CONFIG.conditionTypes[typeSel.value] || {}).desc || '';
+  };
+  typeSel.addEventListener('change', sync);
+  UI.iconPicker(mask, UI.$('#aw-icon', mask));
+  sync();
+}
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 页面：历史 & 每日总结
+ * 每条记录保存"当时实际获得的奖励"，永不重算。
+ * ============================================================ */
+
+Pages = window.Pages || {};
+Pages.history = {
+  filterBehavior: 'all',
+
+  render(view) {
+    const today = todayStats();
+
+    // 筛选后的记录（新的在前）
+    const records = state.history
+      .filter(r => this.filterBehavior === 'all' || r.behaviorId === this.filterBehavior)
+      .slice()
+      .reverse();
+
+    view.innerHTML = `
+      <div class="page anim-in">
+        <div class="page-head"><h1>📜 历史 & 每日总结</h1></div>
+
+        <!-- 今日总结卡片 -->
+        <section class="card daily-card">
+          <div class="daily-head">
+            <h2>📅 今日总结 <span class="daily-date">${dateKey()}</span></h2>
+            <button class="btn btn-ghost btn-sm" id="btn-summary-modal">弹窗查看</button>
+          </div>
+          <div class="daily-grid">
+            <div class="daily-item"><span class="di-label">EXP</span><span class="di-value di-exp">+${fmtNum(today.exp)}</span></div>
+            <div class="daily-item"><span class="di-label">金币</span><span class="di-value di-coin">+${fmtNum(today.coins)} 🪙</span></div>
+            <div class="daily-item"><span class="di-label">完成行为</span><span class="di-value">${today.completions} 次</span></div>
+            ${CONFIG.attributes.map(a => `
+              <div class="daily-item"><span class="di-label">${a.icon} ${a.name}</span>
+              <span class="di-value" style="color:${a.color}">+${fmtNum(today[a.key])}</span></div>`).join('')}
+          </div>
+        </section>
+
+        <!-- 行为筛选 -->
+        <div class="chip-row chip-row-scroll">
+          <button class="chip ${this.filterBehavior === 'all' ? 'active' : ''}" data-bh="all">全部</button>
+          ${state.behaviors.map(b => `
+            <button class="chip ${this.filterBehavior === b.id ? 'active' : ''}" data-bh="${b.id}">
+              ${UI.esc(b.icon)} ${UI.esc(b.name)}
+            </button>`).join('')}
+        </div>
+
+        <!-- 记录列表 -->
+        <div class="history-list">
+          ${records.length ? records.map(r => `
+            <div class="card history-card">
+              <div class="hc-main">
+                <span class="hc-icon">${UI.esc(r.behaviorIcon || '⚡')}</span>
+                <div class="hc-info">
+                  <div class="hc-name-row">
+                    <span class="hc-name">${UI.esc(r.behaviorName)}</span>
+                    <span class="hc-qty">${fmtNum(r.quantity)} ${UI.esc(r.unit || '')}</span>
+                  </div>
+                  <div class="hc-time">${formatTime(r.time)}</div>
+                  <div class="hc-gains">${UI.gainBadges(r.gained)}</div>
+                </div>
+              </div>
+            </div>`).join('') : UI.emptyState('📜', '还没有记录。完成一个行为试试！')}
+        </div>
+      </div>
+    `;
+
+    UI.$('.chip', view).forEach(ch => ch.addEventListener('click', () => {
+      this.filterBehavior = ch.dataset.bh;
+      this.render(view);
+    }));
+    $('#btn-summary-modal').addEventListener('click', () => this.openDailySummaryModal());
+  },
+
+  /** 每日总结弹窗（首页也可调用） */
+  openDailySummaryModal() {
+    const today = todayStats();
+    const content = `
+      <div class="summary-modal">
+        <div class="summary-date">📅 ${dateKey()}</div>
+        <div class="summary-rows">
+          <div class="summary-row big">
+            <span>EXP</span><span class="sv sv-exp">+${fmtNum(today.exp)}</span>
+          </div>
+          <div class="summary-row big">
+            <span>金币</span><span class="sv sv-coin">+${fmtNum(today.coins)} 🪙</span>
+          </div>
+          ${CONFIG.attributes.map(a => `
+            <div class="summary-row">
+              <span>${a.icon} ${a.name}</span>
+              <span class="sv" style="color:${a.color}">+${fmtNum(today[a.key])}</span>
+            </div>`).join('')}
+          <div class="summary-row">
+            <span>⚔️ 完成行为</span><span class="sv">${today.completions} 次</span>
+          </div>
+        </div>
+        ${today.completions === 0 ? '<p class="summary-hint">今天还没有记录，去完成一个行为吧！</p>' : ''}
+      </div>`;
+    UI.openModal({ title: '📅 今日总结', content, actions: [{ label: '好的', class: 'btn-primary' }] });
+  },
+};
+
+</script>
+
+<script>
+/* ============================================================
+ * LIFE RPG - 应用入口
+ * Hash 路由 / 导航（桌面侧边栏 + 手机底部导航）
+ * ============================================================ */
+
+const App = (() => {
+
+  const NAV = [
+    { id: 'home',     path: '#/home',     icon: '🏰', label: '首页' },
+    { id: 'behavior', path: '#/behavior', icon: '⚔️', label: '行为' },
+    { id: 'shop',     path: '#/shop',     icon: '🛒', label: '商店' },
+    { id: 'awards',   path: '#/awards',   icon: '🏆', label: '成就' },
+    { id: 'history',  path: '#/history',  icon: '📜', label: '历史' },
+  ];
+
+  let currentRoute = 'home';
+
+  function parseRoute() {
+    const hash = location.hash || '#/home';
+    const found = NAV.find(n => n.path === hash);
+    return found ? found.id : 'home';
+  }
+
+  function renderNav() {
+    const side = document.getElementById('side-nav');
+    const bottom = document.getElementById('bottom-nav');
+    side.innerHTML = NAV.map(n => `
+      <a class="nav-item ${n.id === currentRoute ? 'active' : ''}" href="${n.path}" data-id="${n.id}">
+        <span class="nav-icon">${n.icon}</span><span class="nav-label">${n.label}</span>
+      </a>`).join('');
+    bottom.innerHTML = NAV.map(n => `
+      <a class="nav-item ${n.id === currentRoute ? 'active' : ''}" href="${n.path}" data-id="${n.id}">
+        <span class="nav-icon">${n.icon}</span><span class="nav-label">${n.label}</span>
+      </a>`).join('');
+  }
+
+  function renderPage() {
+    const view = document.getElementById('page-view');
+    const page = Pages[currentRoute];
+    view.innerHTML = '';
+    if (page && typeof page.render === 'function') {
+      try { page.render(view); }
+      catch (e) { console.error('页面渲染失败', e); view.innerHTML = `<div class="page">${UI.emptyState('⚠️', '页面渲染出错，请刷新重试')}</div>`; }
+    }
+    window.scrollTo(0, 0);
+  }
+
+  /** 任何数据变更后调用：重渲染当前页面 */
+  function refresh() {
+    renderPage();
+  }
+
+  function onHashChange() {
+    const route = parseRoute();
+    if (route !== currentRoute) currentRoute = route;
+    renderNav();
+    renderPage();
+  }
+
+  function init() {
+    window.addEventListener('hashchange', onHashChange);
+    if (!location.hash) location.hash = '#/home';
+    onHashChange();
+    console.log('⚔️ LIFE RPG V1.0 启动完成');
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  return { refresh, nav: NAV };
+})();
+
+</script>
+</body>
+</html>

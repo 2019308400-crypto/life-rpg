@@ -95,6 +95,22 @@ function mergeSeedDefaults(s) {
   // 只对成就和称号做合并（行为/商品完全由用户自己做主，不追加种子项）
   if (mergeList(s.achievements, CONFIG.seed.achievements, 'achievement')) changed = true;
   if (mergeList(s.titles, CONFIG.seed.titles, 'title')) changed = true;
+  // 给用户自建的行为/商品按名称自动补描述（不覆盖已有描述）
+  if (fillDescriptionsByName(s.behaviors, CONFIG.descriptionMap.behaviors)) changed = true;
+  if (fillDescriptionsByName(s.shopItems, CONFIG.descriptionMap.shopItems)) changed = true;
+  return changed;
+}
+
+/** 按名称给没有描述的项补描述（不覆盖用户自己写的） */
+function fillDescriptionsByName(list, nameMap) {
+  if (!list || !nameMap) return false;
+  let changed = false;
+  list.forEach(item => {
+    if (!item.description && nameMap[item.name]) {
+      item.description = nameMap[item.name];
+      changed = true;
+    }
+  });
   return changed;
 }
 

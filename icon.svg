@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0f0f1e"/>
+  <!-- 两把交叉宝剑 -->
+  <!-- 剑1: 左下→右上 -->
+  <g transform="rotate(-45 256 256)">
+    <polygon points="256,80 246,105 266,105" fill="#d4d4e0"/>
+    <rect x="246" y="105" width="20" height="250" fill="#d4d4e0" rx="3"/>
+    <rect x="210" y="350" width="92" height="14" fill="#d4a843" rx="3"/>
+    <rect x="246" y="364" width="20" height="56" fill="#6b3e1e" rx="3"/>
+    <circle cx="256" cy="428" r="12" fill="#d4a843"/>
+  </g>
+  <!-- 剑2: 左上→右下 -->
+  <g transform="rotate(45 256 256)">
+    <polygon points="256,80 246,105 266,105" fill="#e8e8f0"/>
+    <rect x="246" y="105" width="20" height="250" fill="#e8e8f0" rx="3"/>
+    <rect x="210" y="350" width="92" height="14" fill="#f0c050" rx="3"/>
+    <rect x="246" y="364" width="20" height="56" fill="#7b4e2e" rx="3"/>
+    <circle cx="256" cy="428" r="12" fill="#f0c050"/>
+  </g>
+</svg>
