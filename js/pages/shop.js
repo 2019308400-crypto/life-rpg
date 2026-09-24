@@ -8,6 +8,8 @@ Pages.shop = {
 
   render(view) {
     const p = state.player;
+    // 商品按价格从低到高排序展示（不改原数组，仅展示排序）
+    const sortedItems = [...state.shopItems].sort((a, b) => (a.price || 0) - (b.price || 0));
 
     view.innerHTML = `
       <div class="page anim-in">
@@ -20,7 +22,7 @@ Pages.shop = {
         </div>
 
         <div class="shop-grid">
-          ${state.shopItems.length ? state.shopItems.map(item => {
+          ${sortedItems.length ? sortedItems.map(item => {
             const afford = p.coins >= item.price;
             return `
             <div class="card shop-card" data-id="${item.id}">

@@ -23,7 +23,7 @@ Pages.awards = {
           <button class="tab ${this.tab === 'title' ? 'active' : ''}" data-tab="title">👑 称号 <span class="tab-count">${state.titles.filter(t => t.unlocked).length}/${state.titles.length}</span></button>
         </div>
 
-        <div class="award-list">${this.tab === 'achievement' ? this.renderAchievements() : this.renderTitles()}</div>
+        <div class="award-list">${this.tab === 'achievement' ? this.renderAchievements() : this.renderUpcomingTitles() + this.renderTitles()}</div>
       </div>
     `;
 
@@ -95,11 +95,54 @@ Pages.awards = {
     }).join('');
   },
 
+  /** 称号页顶部：按进度排序展示最接近解锁的未解锁称号（最多 3 个） */
+  renderUpcomingTitles() {
+    const locked = state.titles.filter(t => !t.unlocked);
+    if (!locked.length) return '';
+    const ranked = locked.map(t => {
+      const prog = conditionProgress(t.condition);
+      const pct = prog.target > 0 ? prog.current / prog.target : 0;
+      return { t, prog, pct };
+    }).sort((a, b) => b.pct - a.pct);
+    const top = ranked.slice(0, 3);
+    if (!top.length) return '';
+    return `
+      <div class="card upcoming-card">
+        <div class="upcoming-head">🚀 即将解锁 · 升级/努力就能拿到的新称号</div>
+        <div class="upcoming-list">
+          ${top.map(({ t, prog, pct }) => {
+            const remain = prog.target > prog.current ? fmtNum(prog.target - prog.current) : 0;
+            const remainText =
+              (t.condition.type === 'level') ? `再升 ${remain} 级` :
+              (t.condition.type === 'attribute') ? `还差 ${remain}` :
+              `还差 ${remain}`;
+            return `
+            <div class="upcoming-item">
+              <span class="upcoming-icon">${UI.esc(t.icon || '👑')}</span>
+              <div class="upcoming-info">
+                <div class="upcoming-name">${UI.esc(t.name)}</div>
+                <div class="upcoming-cond">${UI.esc(conditionText(t.condition))}</div>
+              </div>
+              <div class="upcoming-meta">
+                <div class="award-bar"><div class="award-fill" style="width:${Math.min(100, pct * 100)}%"></div></div>
+                <span class="upcoming-remain">${remainText}</span>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  },
+
   renderTitles() {
     if (!state.titles.length) return UI.emptyState('👑', '还没有称号。创建一个吧，例如"终身学习者：Intelligence ≥ 50"。');
     return state.titles.map(t => {
       const prog = conditionProgress(t.condition);
       const equipped = state.player.titleId === t.id;
+      const remaining = prog.target > prog.current ? fmtNum(prog.target - prog.current) : 0;
+      const remainText = t.unlocked ? '' :
+        (t.condition.type === 'level') ? `还需升级 ${remaining} 次` :
+        (t.condition.type === 'attribute') ? `还差 ${remaining}` :
+        `还差 ${remaining}`;
       return `
       <div class="card award-card ${t.unlocked ? 'unlocked' : ''} ${equipped ? 'equipped' : ''}" data-award-kind="title" data-award-id="${t.id}">
         <div class="award-main">
@@ -114,6 +157,7 @@ Pages.awards = {
               <div class="award-bar"><div class="award-fill" style="width:${Math.min(100, prog.target > 0 ? (prog.current / prog.target) * 100 : 0)}%"></div></div>
               <span class="award-nums">${fmtNum(prog.current)} / ${fmtNum(prog.target)}</span>
             </div>
+            ${!t.unlocked && remainText ? `<div class="award-remain">🚀 ${remainText}即可解锁此称号</div>` : ''}
           </div>
         </div>
         <div class="award-actions">

@@ -44,6 +44,61 @@ function buildSeededState() {
   return s;
 }
 
+/**
+ * 种子合并迁移：让已有存档也能看到种子里的新描述和新增项。
+ * - 按 id 追加种子中存在但存档里没有的项（成就/称号追加时 unlocked=false）
+ * - 已存在的项：更新 description（用种子新描述覆盖旧描述）
+ * - 成就：rewards 全为 0 时用种子奖励补齐（不覆盖用户自定义的非零奖励）
+ * 不会改动用户自建的项、奖励数值、解锁状态。
+ */
+function mergeSeedDefaults(s) {
+  const mergeList = (list, seedList, kind) => {
+    let changed = false;
+    seedList.forEach(seed => {
+      const existing = list.find(x => x.id === seed.id);
+      if (!existing) {
+        // 追加缺失的种子项
+        const entry = { ...seed, condition: { ...seed.condition } };
+        if (kind === 'achievement') {
+          entry.rewards = { exp: 0, coins: 0, ...(seed.rewards || {}) };
+          entry.unlocked = false;
+          entry.unlockedAt = null;
+        } else if (kind === 'title') {
+          entry.unlocked = false;
+          entry.unlockedAt = null;
+        }
+        list.push(entry);
+        changed = true;
+      } else {
+        // 更新描述
+        if (seed.description && existing.description !== seed.description) {
+          existing.description = seed.description;
+          changed = true;
+        }
+        // 成就：奖励为 0 时补齐
+        if (kind === 'achievement' && seed.rewards) {
+          const r = existing.rewards || { exp: 0, coins: 0 };
+          if ((!r.exp && seed.rewards.exp) || (!r.coins && seed.rewards.coins)) {
+            existing.rewards = {
+              exp: r.exp || seed.rewards.exp || 0,
+              coins: r.coins || seed.rewards.coins || 0,
+            };
+            changed = true;
+          }
+        }
+      }
+    });
+    return changed;
+  };
+
+  let changed = false;
+  if (mergeList(s.behaviors, CONFIG.seed.behaviors, 'behavior')) changed = true;
+  if (mergeList(s.shopItems, CONFIG.seed.shopItems, 'shop')) changed = true;
+  if (mergeList(s.achievements, CONFIG.seed.achievements, 'achievement')) changed = true;
+  if (mergeList(s.titles, CONFIG.seed.titles, 'title')) changed = true;
+  return changed;
+}
+
 /** 读取存档；缺失字段用默认值补齐（保证旧存档升级兼容） */
 function loadState() {
   try {
@@ -62,6 +117,8 @@ function loadState() {
       ...a,
       rewards: { exp: 0, coins: 0, ...((a && a.rewards) || {}) },
     }));
+    // 种子合并迁移：补全新描述和新增项
+    mergeSeedDefaults(merged);
     return merged;
   } catch (e) {
     console.error('读取存档失败，使用新存档', e);
@@ -82,5 +139,6 @@ function saveState() {
 let state = loadState();
 if (state.firstOpen) {
   state.firstOpen = false;
-  saveState();
 }
+// 持久化合并迁移的结果（新描述/新增项），保证刷新后不丢
+saveState();
