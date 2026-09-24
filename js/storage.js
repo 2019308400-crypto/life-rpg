@@ -123,8 +123,28 @@ function fillDescriptionsByName(list, nameMap) {
   if (!list || !nameMap) return false;
   let changed = false;
   list.forEach(item => {
-    if (!item.description && nameMap[item.name]) {
-      item.description = nameMap[item.name];
+    if (!item.description) {
+      // 1. 精确匹配
+      if (nameMap[item.name]) {
+        item.description = nameMap[item.name];
+        changed = true;
+        return;
+      }
+      // 2. 模糊匹配：名称包含关键词
+      const name = item.name;
+      for (const key in nameMap) {
+        if (name.includes(key) || key.includes(name)) {
+          item.description = nameMap[key];
+          changed = true;
+          return;
+        }
+      }
+      // 3. 通用兜底描述
+      if (list === state.behaviors) {
+        item.description = `${name}，是你给自己定下的一场小冒险`;
+      } else {
+        item.description = `用${name}奖励一下努力的自己`;
+      }
       changed = true;
     }
   });
