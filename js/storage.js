@@ -70,8 +70,8 @@ function mergeSeedDefaults(s) {
         list.push(entry);
         changed = true;
       } else {
-        // 更新描述
-        if (seed.description && existing.description !== seed.description) {
+        // 只填充空描述，不覆盖用户自己写的描述
+        if (seed.description && !existing.description) {
           existing.description = seed.description;
           changed = true;
         }
