@@ -92,12 +92,29 @@ function mergeSeedDefaults(s) {
   };
 
   let changed = false;
-  // 只对成就和称号做合并（行为/商品完全由用户自己做主，不追加种子项）
+  // 成就和称号合并
   if (mergeList(s.achievements, CONFIG.seed.achievements, 'achievement')) changed = true;
   if (mergeList(s.titles, CONFIG.seed.titles, 'title')) changed = true;
+  // 行为/商品：按名称追加种子里有但用户没有的项（不覆盖用户已有的）
+  if (appendSeedByName(s.behaviors, CONFIG.seed.behaviors)) changed = true;
+  if (appendSeedByName(s.shopItems, CONFIG.seed.shopItems)) changed = true;
   // 给用户自建的行为/商品按名称自动补描述（不覆盖已有描述）
   if (fillDescriptionsByName(s.behaviors, CONFIG.descriptionMap.behaviors)) changed = true;
   if (fillDescriptionsByName(s.shopItems, CONFIG.descriptionMap.shopItems)) changed = true;
+  return changed;
+}
+
+/** 按名称追加种子项到用户列表（用户已有同名项则跳过） */
+function appendSeedByName(userList, seedList) {
+  if (!userList || !seedList) return false;
+  let changed = false;
+  const userNames = new Set(userList.map(i => i.name));
+  seedList.forEach(seed => {
+    if (!userNames.has(seed.name)) {
+      userList.push({ ...seed, rewards: seed.rewards ? { ...seed.rewards } : undefined });
+      changed = true;
+    }
+  });
   return changed;
 }
 

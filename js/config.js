@@ -108,12 +108,18 @@ const CONFIG = {
     ],
 
     shopItems: [
-      { id: 'sh_song',    name: '听一首歌',     icon: '🎧', description: '给耳朵发一颗糖，三分钟的 mini 假期', price: 10 },
-      { id: 'sh_milktea', name: '喝杯奶茶',     icon: '🧋', description: '一杯下肚，烦恼被珍珠嚼碎',           price: 50 },
-      { id: 'sh_game',    name: '游戏时间',     icon: '🎮', description: '按下开始键，把压力交给通关',           price: 80 },
-      { id: 'sh_movie',   name: '看一场电影',   icon: '🎬', description: '两小时的逃离现实体验券',               price: 100 },
-      { id: 'sh_meal',    name: '吃顿好的',     icon: '🍽️', description: '认真对待一顿饭，就是认真对待自己',     price: 200 },
-      { id: 'sh_gift',    name: '给自己买礼物', icon: '🎁', description: '奖励过去一段时间里那个努力的自己',     price: 300 },
+      { id: 'sh_song',      name: '听一首歌',           icon: '🎧', description: '给耳朵发一颗糖，三分钟的 mini 假期',       price: 10 },
+      { id: 'sh_milktea',   name: '喝杯奶茶',           icon: '🧋', description: '一杯下肚，烦恼被珍珠嚼碎',                 price: 50 },
+      { id: 'sh_gamehour',  name: '玩一个小时游戏',     icon: '🎮', description: '一小时的虚拟冒险，把现实的烦恼暂时存档',   price: 50 },
+      { id: 'sh_hotpot_school', name: '学校爽吃火锅麻辣烫', icon: '🍲', description: '一锅沸腾，烫熟的不只是菜，还有一整天的疲惫', price: 60 },
+      { id: 'sh_snack',     name: '吃小零食',           icon: '🍪', description: '嘴巴寂寞的时候，给它找点事情做',           price: 80 },
+      { id: 'sh_movie',     name: '看一场电影',         icon: '🎬', description: '两小时的逃离现实体验券',                   price: 100 },
+      { id: 'sh_hotpot',    name: '吃火锅',             icon: '🍲', description: '围炉而坐，把所有情绪都涮进红汤里',         price: 100 },
+      { id: 'sh_buffet',    name: '自助餐',             icon: '🍽️', description: '吃到扶墙而出，是对自助最基本的尊重',       price: 100 },
+      { id: 'sh_footspa',   name: '足浴按摩',           icon: '🦶', description: '让辛苦的双脚享受半小时的 VIP 待遇',        price: 200 },
+      { id: 'sh_meal',      name: '吃顿好的',           icon: '🍱', description: '认真对待一顿饭，就是认真对待自己',         price: 200 },
+      { id: 'sh_gift',      name: '给自己买礼物',       icon: '🎁', description: '奖励过去一段时间里那个努力的自己',         price: 300 },
+      { id: 'sh_capo',      name: '夏伯变调夹',         icon: '🎸', description: '给吉他换个调，也给生活换个心情',           price: 400 },
     ],
 
     achievements: [
