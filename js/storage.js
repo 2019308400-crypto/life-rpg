@@ -99,8 +99,8 @@ function mergeSeedDefaults(s) {
   if (appendSeedByName(s.behaviors, CONFIG.seed.behaviors)) changed = true;
   if (appendSeedByName(s.shopItems, CONFIG.seed.shopItems)) changed = true;
   // 给用户自建的行为/商品按名称自动补描述（不覆盖已有描述）
-  if (fillDescriptionsByName(s.behaviors, CONFIG.descriptionMap.behaviors)) changed = true;
-  if (fillDescriptionsByName(s.shopItems, CONFIG.descriptionMap.shopItems)) changed = true;
+  if (fillDescriptionsByName(s.behaviors, CONFIG.descriptionMap.behaviors, true)) changed = true;
+  if (fillDescriptionsByName(s.shopItems, CONFIG.descriptionMap.shopItems, false)) changed = true;
   return changed;
 }
 
@@ -119,19 +119,19 @@ function appendSeedByName(userList, seedList) {
 }
 
 /** 按名称给没有描述的项补描述（不覆盖用户自己写的） */
-function fillDescriptionsByName(list, nameMap) {
+function fillDescriptionsByName(list, nameMap, isBehavior) {
   if (!list || !nameMap) return false;
   let changed = false;
   list.forEach(item => {
     if (!item.description) {
+      const name = item.name || '';
       // 1. 精确匹配
-      if (nameMap[item.name]) {
-        item.description = nameMap[item.name];
+      if (nameMap[name]) {
+        item.description = nameMap[name];
         changed = true;
         return;
       }
       // 2. 模糊匹配：名称包含关键词
-      const name = item.name;
       for (const key in nameMap) {
         if (name.includes(key) || key.includes(name)) {
           item.description = nameMap[key];
@@ -140,11 +140,9 @@ function fillDescriptionsByName(list, nameMap) {
         }
       }
       // 3. 通用兜底描述
-      if (list === state.behaviors) {
-        item.description = `${name}，是你给自己定下的一场小冒险`;
-      } else {
-        item.description = `用${name}奖励一下努力的自己`;
-      }
+      item.description = isBehavior
+        ? `${name}，是你给自己定下的一场小冒险`
+        : `用${name}奖励一下努力的自己`;
       changed = true;
     }
   });
