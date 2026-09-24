@@ -170,7 +170,66 @@ const UI = (() => {
     return parts.join('');
   }
 
-  return { esc, $, $$, toast, rewardToast, confirmDialog, openModal, closeModal, levelUpOverlay, iconPicker, emptyState, gainBadges };
+  /* ---------- 智能描述生成 ---------- */
+
+  /**
+   * 根据名称智能生成有趣描述
+   * @param {string} name - 名称
+   * @param {string} type - 'behavior' | 'shop' | 'achievement' | 'title'
+   * @returns {string} 描述
+   */
+  function generateDescription(name, type) {
+    if (!name) return '';
+    const map = type === 'behavior' ? CONFIG.descriptionMap.behaviors
+              : type === 'shop' ? CONFIG.descriptionMap.shopItems
+              : null;
+
+    // 1. 精确匹配
+    if (map && map[name]) return map[name];
+
+    // 2. 模糊匹配（包含关键词）
+    if (map) {
+      for (const key in map) {
+        if (name.includes(key) || key.includes(name)) return map[key];
+      }
+    }
+
+    // 3. 按类型生成通用有趣描述
+    const templates = {
+      behavior: [
+        `${name}，是你给自己定下的一场小冒险`,
+        `每一次${name}，都在雕刻更好的自己`,
+        `${name}，让平凡的日子多一点光芒`,
+        `坚持${name}，时间会给你答案`,
+        `${name}，是和自己的一场温柔较量`,
+      ],
+      shop: [
+        `用${name}奖励一下努力的自己`,
+        `${name}，是辛苦生活里的小确幸`,
+        `值得拥有的${name}，值得拥有的你`,
+        `${name}，给自己的一份犒赏`,
+        `用${name}，给生活加点甜`,
+      ],
+      achievement: [
+        `解锁「${name}」的瞬间，就是最好的证明`,
+        `${name}，是你一路坚持的勋章`,
+        `拿下${name}，你比想象中更强`,
+        `${name}，藏着你不为人知的努力`,
+        `当${name}亮起，所有付出都有了意义`,
+      ],
+      title: [
+        `配得上「${name}」的，是不平凡的你`,
+        `${name}，是时间给你的加冕`,
+        `戴上${name}，你就是自己的英雄`,
+        `${name}，刻着你走过的每一步`,
+        `成为${name}的路上，你从未放弃`,
+      ],
+    };
+    const arr = templates[type] || templates.behavior;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  return { esc, $, $$, toast, rewardToast, confirmDialog, openModal, closeModal, levelUpOverlay, iconPicker, emptyState, gainBadges, generateDescription };
 })();
 
 // 全局暴露快捷选择器（供各页面直接使用 $ / $$）

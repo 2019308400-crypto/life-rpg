@@ -193,7 +193,10 @@ function openAwardForm(kind, itemId) {
       </label>
       <label class="field field-full">
         <span class="field-label">描述（可选）</span>
-        <input type="text" class="input" id="aw-desc" maxlength="60" placeholder="这个${label}的意义" value="${UI.esc(item ? item.description : '')}">
+        <div class="input-with-btn">
+          <input type="text" class="input" id="aw-desc" maxlength="60" placeholder="这个${label}的意义" value="${UI.esc(item ? item.description : '')}">
+          <button type="button" class="btn btn-gen" id="aw-gen-desc">✨生成</button>
+        </div>
       </label>
 
       <div class="field field-full">
@@ -313,5 +316,12 @@ function openAwardForm(kind, itemId) {
   };
   typeSel.addEventListener('change', sync);
   UI.iconPicker(mask, UI.$('#aw-icon', mask));
+
+  // 智能生成描述
+  UI.$('#aw-gen-desc', mask).addEventListener('click', () => {
+    const name = UI.$('#aw-name', mask).value.trim();
+    if (!name) { UI.toast('请先填写名称', 'error'); return; }
+    UI.$('#aw-desc', mask).value = UI.generateDescription(name, isAch ? 'achievement' : 'title');
+  });
   sync();
 }

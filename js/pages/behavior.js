@@ -249,7 +249,10 @@ function openBehaviorForm(behaviorId) {
       </label>
       <label class="field field-full">
         <span class="field-label">描述（可选）</span>
-        <input type="text" class="input" id="bh-desc" maxlength="60" placeholder="简单描述这个行为" value="${UI.esc(b ? b.description : '')}">
+        <div class="input-with-btn">
+          <input type="text" class="input" id="bh-desc" maxlength="60" placeholder="简单描述这个行为" value="${UI.esc(b ? b.description : '')}">
+          <button type="button" class="btn btn-gen" id="bh-gen-desc">✨生成</button>
+        </div>
       </label>
 
       <div class="field field-full">
@@ -331,6 +334,13 @@ function openBehaviorForm(behaviorId) {
         c.classList.toggle('active', c.querySelector('input').checked));
     }));
   UI.iconPicker(mask, UI.$('#bh-icon', mask));
+
+  // 智能生成描述
+  UI.$('#bh-gen-desc', mask).addEventListener('click', () => {
+    const name = UI.$('#bh-name', mask).value.trim();
+    if (!name) { UI.toast('请先填写行为名称', 'error'); return; }
+    UI.$('#bh-desc', mask).value = UI.generateDescription(name, 'behavior');
+  });
 }
 
 /* ================= 分类管理弹窗 ================= */

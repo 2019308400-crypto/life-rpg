@@ -139,6 +139,24 @@ a { color: var(--cyan); text-decoration: none; }
 .btn-disabled { opacity: .45; cursor: not-allowed; }
 .btn-disabled:active { transform: none; }
 
+/* 输入框 + 生成按钮 组合 */
+.input-with-btn { display: flex; gap: 8px; align-items: center; }
+.input-with-btn .input { flex: 1; }
+.btn-gen {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  border: 1px solid rgba(167, 139, 250, .4);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-gen:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124, 58, 237, .35); }
+.btn-gen:active { transform: translateY(0); }
+
 /* 大号主行动按钮 */
 .btn-primary-big {
   width: 100%;

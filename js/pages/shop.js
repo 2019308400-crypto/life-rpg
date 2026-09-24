@@ -111,7 +111,10 @@ function openShopItemForm(itemId) {
       </label>
       <label class="field">
         <span class="field-label">描述（可选）</span>
-        <input type="text" class="input" id="sh-desc" maxlength="60" placeholder="给自己的一点奖励" value="${UI.esc(item ? item.description : '')}">
+        <div class="input-with-btn">
+          <input type="text" class="input" id="sh-desc" maxlength="60" placeholder="给自己的一点奖励" value="${UI.esc(item ? item.description : '')}">
+          <button type="button" class="btn btn-gen" id="sh-gen-desc">✨生成</button>
+        </div>
       </label>
       <div class="field-full icon-picker-wrap">
         <span class="field-label">快捷图标</span>
@@ -144,4 +147,11 @@ function openShopItemForm(itemId) {
     ],
   });
   UI.iconPicker(mask, UI.$('#sh-icon', mask));
+
+  // 智能生成描述
+  UI.$('#sh-gen-desc', mask).addEventListener('click', () => {
+    const name = UI.$('#sh-name', mask).value.trim();
+    if (!name) { UI.toast('请先填写商品名称', 'error'); return; }
+    UI.$('#sh-desc', mask).value = UI.generateDescription(name, 'shop');
+  });
 }
