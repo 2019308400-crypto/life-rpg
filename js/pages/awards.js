@@ -1,37 +1,128 @@
 /* ============================================================
  * LIFE RPG - 页面：成就 & 称号
  * 两个独立系统，条件类型完全共用，内容由用户自建。
+ *
+ * 成就：支持按「已达成 / 未达成」+「学习 / 运动 / 生活…领域」筛选。
+ * 领域归属：成就自带 categoryId 优先；老数据 / 未指定时智能推断
+ *           （关联行为 → 跟行为的分类；属性条件 → 按属性映射；其余 → 综合）。
+ * 称号：支持按「已达成 / 未达成」筛选，未达成按进度排序。
  * ============================================================ */
 
 Pages = window.Pages || {};
+
+/* ---------- 成就领域智能推断 ---------- */
+
+/** 特殊分组：综合（等级、累计总次数等跨领域成就） */
+const AWARD_GENERAL = 'cat_general';
+
+/** 按名称关键词找用户分类（如"学习""运动"），找不到返回 null */
+function findCatByKeyword(kw) {
+  return state.categories.find(c => c.name.includes(kw)) || null;
+}
+
+/** 根据条件智能推断所属领域 id（不考虑成就自身已保存的 categoryId） */
+function inferAwardCategory(cond) {
+  const c = cond || {};
+
+  // 1. 条件关联了某个行为 → 跟着该行为的分类走
+  if (c.behaviorId) {
+    const b = state.behaviors.find(x => x.id === c.behaviorId);
+    if (b && b.categoryId && state.categories.some(cc => cc.id === b.categoryId)) {
+      return b.categoryId;
+    }
+  }
+
+  // 2. 属性条件 → 按属性含义映射
+  if (c.type === 'attribute') {
+    if (c.attribute === 'intelligence') {
+      const c1 = findCatByKeyword('学');
+      if (c1) return c1.id;
+    }
+    if (c.attribute === 'health' || c.attribute === 'fitness') {
+      const c1 = findCatByKeyword('运动') || findCatByKeyword('体');
+      if (c1) return c1.id;
+    }
+  }
+
+  // 3. 等级 / 累计总次数 / 其他 → 综合
+  return AWARD_GENERAL;
+}
+
+/** 成就最终所属领域：自身保存的字段优先（且分类仍存在），否则智能推断 */
+function awardCategoryId(a) {
+  if (a.categoryId && state.categories.some(c => c.id === a.categoryId)) return a.categoryId;
+  return inferAwardCategory(a.condition);
+}
+
+/** 领域展示信息：用户分类或「综合」兜底 */
+function awardCatInfo(cid) {
+  const fallback = { id: AWARD_GENERAL, name: '综合', icon: '🎯', color: '#b07cff' };
+  if (cid === AWARD_GENERAL) return fallback;
+  const c = state.categories.find(x => x.id === cid);
+  return c ? { id: c.id, name: c.name, icon: c.icon || '🏷️', color: c.color || '#8a93b2' }
+           : fallback;
+}
+
+/** 状态筛选是否命中：status = all | unlocked | locked */
+function matchStatus(item, status) {
+  if (status === 'unlocked') return !!item.unlocked;
+  if (status === 'locked') return !item.unlocked;
+  return true;
+}
+
+/** 条件进度比例 0~1（排序用） */
+function progressPct(item) {
+  const prog = conditionProgress(item.condition);
+  return prog.target > 0 ? Math.min(1, prog.current / prog.target) : (prog.done ? 1 : 0);
+}
+
+/* ---------- 页面 ---------- */
+
 Pages.awards = {
-  tab: 'achievement', // 'achievement' | 'title'
+  tab: 'achievement',   // 'achievement' | 'title'
+  achStatus: 'all',     // all | unlocked | locked
+  achCat: 'all',        // all | 分类 id
+  titleStatus: 'all',   // all | unlocked | locked
 
   render(view) {
     cleanTitleRef();
+    const isAch = this.tab === 'achievement';
     view.innerHTML = `
       <div class="page anim-in">
         <div class="page-head">
           <h1>🏆 成就 & 称号</h1>
           <div class="head-actions">
-            <button class="btn btn-primary" id="btn-new-award">＋ 新建${this.tab === 'achievement' ? '成就' : '称号'}</button>
+            <button class="btn btn-primary" id="btn-new-award">＋ 新建${isAch ? '成就' : '称号'}</button>
           </div>
         </div>
 
         <div class="tab-row">
-          <button class="tab ${this.tab === 'achievement' ? 'active' : ''}" data-tab="achievement">🎖️ 成就 <span class="tab-count">${state.achievements.filter(a => a.unlocked).length}/${state.achievements.length}</span></button>
-          <button class="tab ${this.tab === 'title' ? 'active' : ''}" data-tab="title">👑 称号 <span class="tab-count">${state.titles.filter(t => t.unlocked).length}/${state.titles.length}</span></button>
+          <button class="tab ${isAch ? 'active' : ''}" data-tab="achievement">🎖️ 成就 <span class="tab-count">${state.achievements.filter(a => a.unlocked).length}/${state.achievements.length}</span></button>
+          <button class="tab ${!isAch ? 'active' : ''}" data-tab="title">👑 称号 <span class="tab-count">${state.titles.filter(t => t.unlocked).length}/${state.titles.length}</span></button>
         </div>
 
-        <div class="award-list">${this.tab === 'achievement' ? this.renderAchievements() : this.renderUpcomingTitles() + this.renderTitles()}</div>
+        ${isAch ? this.renderAchFilters() : this.renderTitleFilters()}
+        <div class="award-list">${isAch ? this.renderAchievements() : this.renderTitles()}</div>
       </div>
     `;
 
+    // 成就 / 称号 主 tab
     UI.$$('.tab', view).forEach(t => t.addEventListener('click', () => {
       this.tab = t.dataset.tab;
       this.render(view);
     }));
     $('#btn-new-award').addEventListener('click', () => openAwardForm(this.tab, null));
+
+    // 状态 / 领域 chip
+    UI.$$('[data-ach-status]', view).forEach(c => c.addEventListener('click', () => {
+      this.achStatus = c.dataset.achStatus; this.render(view);
+    }));
+    UI.$$('[data-ach-cat]', view).forEach(c => c.addEventListener('click', () => {
+      this.achCat = c.dataset.achCat; this.render(view);
+    }));
+    UI.$$('[data-title-status]', view).forEach(c => c.addEventListener('click', () => {
+      this.titleStatus = c.dataset.titleStatus; this.render(view);
+    }));
 
     // 成就/称号卡片操作
     UI.$$('[data-award-id]', view).forEach(card => {
@@ -63,12 +154,114 @@ Pages.awards = {
     });
   },
 
+  /* ---------- 筛选 chip ---------- */
+
+  /** 成就：状态行 + 领域行（领域行只列当前状态下实际出现的分组） */
+  renderAchFilters() {
+    const aList = state.achievements;
+    const n = {
+      all: aList.length,
+      unlocked: aList.filter(a => a.unlocked).length,
+      locked: aList.filter(a => !a.unlocked).length,
+    };
+    const statusChip = (val, label) =>
+      `<button class="chip ${this.achStatus === val ? 'active' : ''}" data-ach-status="${val}">${label} <span class="chip-n">${n[val]}</span></button>`;
+
+    // 状态筛选后出现过的领域，按用户分类顺序排列，综合最后
+    const statusFiltered = aList.filter(a => matchStatus(a, this.achStatus));
+    const catIds = [...new Set(statusFiltered.map(awardCategoryId))];
+    const orderedCats = state.categories.map(c => c.id).filter(id => catIds.includes(id));
+    if (catIds.includes(AWARD_GENERAL)) orderedCats.push(AWARD_GENERAL);
+
+    const catChip = cid => {
+      const info = awardCatInfo(cid);
+      const count = statusFiltered.filter(a => awardCategoryId(a) === cid).length;
+      return `<button class="chip ${this.achCat === cid ? 'active' : ''}" data-ach-cat="${cid}">${UI.esc(info.icon)} ${UI.esc(info.name)} <span class="chip-n">${count}</span></button>`;
+    };
+
+    return `
+      <div class="chip-row">
+        ${statusChip('all', '📋 全部')}
+        ${statusChip('unlocked', '✅ 已达成')}
+        ${statusChip('locked', '🔒 未达成')}
+      </div>
+      ${orderedCats.length ? `
+      <div class="chip-row chip-row-cats">
+        <button class="chip ${this.achCat === 'all' ? 'active' : ''}" data-ach-cat="all">🏷️ 全部领域</button>
+        ${orderedCats.map(catChip).join('')}
+      </div>` : ''}`;
+  },
+
+  /** 称号：状态行 */
+  renderTitleFilters() {
+    const tList = state.titles;
+    const n = {
+      all: tList.length,
+      unlocked: tList.filter(t => t.unlocked).length,
+      locked: tList.filter(t => !t.unlocked).length,
+    };
+    const chip = (val, label) =>
+      `<button class="chip ${this.titleStatus === val ? 'active' : ''}" data-title-status="${val}">${label} <span class="chip-n">${n[val]}</span></button>`;
+    return `
+      <div class="chip-row">
+        ${chip('all', '📋 全部')}
+        ${chip('unlocked', '✅ 已达成')}
+        ${chip('locked', '🔒 未达成')}
+      </div>`;
+  },
+
+  /* ---------- 成就列表（按领域分组） ---------- */
+
   renderAchievements() {
-    if (!state.achievements.length) return UI.emptyState('🎖️', '还没有成就。创建一个吧，例如"第一次完成任意行为"。');
-    return state.achievements.map(a => {
-      const prog = conditionProgress(a.condition);
-      const pct = Math.min(100, prog.target > 0 ? (prog.current / prog.target) * 100 : (prog.done ? 100 : 0));
+    if (!state.achievements.length) {
+      return UI.emptyState('🎖️', '还没有成就。创建一个吧，例如"第一次完成任意行为"。');
+    }
+
+    // 状态筛选
+    const filtered = state.achievements.filter(a => matchStatus(a, this.achStatus));
+
+    // 按领域分组（同时应用领域筛选）
+    const groups = new Map();
+    filtered.forEach(a => {
+      const cid = awardCategoryId(a);
+      if (this.achCat !== 'all' && cid !== this.achCat) return;
+      if (!groups.has(cid)) groups.set(cid, []);
+      groups.get(cid).push(a);
+    });
+    if (!groups.size) return UI.emptyState('🔍', '当前筛选条件下没有成就');
+
+    // 组顺序：用户分类顺序，综合最后
+    const order = state.categories.map(c => c.id).concat(AWARD_GENERAL).filter(id => groups.has(id));
+
+    return order.map(cid => {
+      const info = awardCatInfo(cid);
+      const items = groups.get(cid);
+
+      // 组内：已达成在前（按解锁时间新→旧）；未达成在后（按进度高→低）
+      items.sort((x, y) => {
+        if (!!x.unlocked !== !!y.unlocked) return x.unlocked ? -1 : 1;
+        if (x.unlocked) return (y.unlockedAt || 0) - (x.unlockedAt || 0);
+        return progressPct(y) - progressPct(x);
+      });
+
+      const unlockedN = items.filter(a => a.unlocked).length;
       return `
+      <section class="award-group">
+        <div class="award-group-head" style="--cat-color:${info.color}">
+          <span class="agh-icon">${UI.esc(info.icon)}</span>
+          <span class="agh-name">${UI.esc(info.name)}</span>
+          <span class="agh-count">${unlockedN}/${items.length}</span>
+        </div>
+        ${items.map(a => this.achCard(a)).join('')}
+      </section>`;
+    }).join('');
+  },
+
+  /** 单个成就卡片 */
+  achCard(a) {
+    const prog = conditionProgress(a.condition);
+    const pct = Math.min(100, prog.target > 0 ? (prog.current / prog.target) * 100 : (prog.done ? 100 : 0));
+    return `
       <div class="card award-card ${a.unlocked ? 'unlocked' : ''}" data-award-kind="achievement" data-award-id="${a.id}">
         <div class="award-main">
           <span class="award-icon ${a.unlocked ? 'glow' : 'gray'}">${UI.esc(a.icon || '🎖️')}</span>
@@ -92,56 +285,34 @@ Pages.awards = {
           <button class="btn btn-ghost btn-sm act-award-del">🗑️</button>
         </div>
       </div>`;
-    }).join('');
   },
 
-  /** 称号页顶部：按进度排序展示最接近解锁的未解锁称号（最多 3 个） */
-  renderUpcomingTitles() {
-    const locked = state.titles.filter(t => !t.unlocked);
-    if (!locked.length) return '';
-    const ranked = locked.map(t => {
-      const prog = conditionProgress(t.condition);
-      const pct = prog.target > 0 ? prog.current / prog.target : 0;
-      return { t, prog, pct };
-    }).sort((a, b) => b.pct - a.pct);
-    const top = ranked.slice(0, 3);
-    if (!top.length) return '';
-    return `
-      <div class="card upcoming-card">
-        <div class="upcoming-head">🚀 即将解锁 · 升级/努力就能拿到的新称号</div>
-        <div class="upcoming-list">
-          ${top.map(({ t, prog, pct }) => {
-            const remain = prog.target > prog.current ? fmtNum(prog.target - prog.current) : 0;
-            const remainText =
-              (t.condition.type === 'level') ? `再升 ${remain} 级` :
-              (t.condition.type === 'attribute') ? `还差 ${remain}` :
-              `还差 ${remain}`;
-            return `
-            <div class="upcoming-item">
-              <span class="upcoming-icon">${UI.esc(t.icon || '👑')}</span>
-              <div class="upcoming-info">
-                <div class="upcoming-name">${UI.esc(t.name)}</div>
-                <div class="upcoming-cond">${UI.esc(conditionText(t.condition))}</div>
-              </div>
-              <div class="upcoming-meta">
-                <div class="award-bar"><div class="award-fill" style="width:${Math.min(100, pct * 100)}%"></div></div>
-                <span class="upcoming-remain">${remainText}</span>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-  },
+  /* ---------- 称号列表 ---------- */
 
   renderTitles() {
-    if (!state.titles.length) return UI.emptyState('👑', '还没有称号。创建一个吧，例如"终身学习者：Intelligence ≥ 50"。');
-    return state.titles.map(t => {
+    if (!state.titles.length) {
+      return UI.emptyState('👑', '还没有称号。创建一个吧，例如"终身学习者：Intelligence ≥ 50"。');
+    }
+    const filtered = state.titles.filter(t => matchStatus(t, this.titleStatus));
+    if (!filtered.length) return UI.emptyState('🔍', '当前筛选条件下没有称号');
+
+    // 已达成在前（佩戴中的最前）；未达成按进度高→低
+    filtered.sort((x, y) => {
+      if (!!x.unlocked !== !!y.unlocked) return x.unlocked ? -1 : 1;
+      if (x.unlocked) {
+        const xe = state.player.titleId === x.id, ye = state.player.titleId === y.id;
+        if (xe !== ye) return xe ? -1 : 1;
+        return (y.unlockedAt || 0) - (x.unlockedAt || 0);
+      }
+      return progressPct(y) - progressPct(x);
+    });
+
+    return filtered.map(t => {
       const prog = conditionProgress(t.condition);
       const equipped = state.player.titleId === t.id;
       const remaining = prog.target > prog.current ? fmtNum(prog.target - prog.current) : 0;
       const remainText = t.unlocked ? '' :
         (t.condition.type === 'level') ? `还需升级 ${remaining} 次` :
-        (t.condition.type === 'attribute') ? `还差 ${remaining}` :
         `还差 ${remaining}`;
       return `
       <div class="card award-card ${t.unlocked ? 'unlocked' : ''} ${equipped ? 'equipped' : ''}" data-award-kind="title" data-award-id="${t.id}">
@@ -179,6 +350,10 @@ function openAwardForm(kind, itemId) {
   const cond = (item && item.condition) || { type: 'level', behaviorId: '', attribute: '', value: 1 };
   const label = isAch ? '成就' : '称号';
 
+  // 成就领域初始值：已保存字段 → 智能推断
+  const initialCat = item ? (item.categoryId || inferAwardCategory(item.condition))
+                         : inferAwardCategory(cond);
+
   const condNeeds = type => (CONFIG.conditionTypes[type] || { needs: [] }).needs;
 
   const content = `
@@ -191,6 +366,14 @@ function openAwardForm(kind, itemId) {
         <span class="field-label">图标（emoji）</span>
         <input type="text" class="input" id="aw-icon" maxlength="4" placeholder="${isAch ? '🎖️' : '👑'}" value="${UI.esc(item ? item.icon : '')}">
       </label>
+      ${isAch ? `
+      <label class="field field-full">
+        <span class="field-label">所属领域（按条件可自动判断，也可手动改）</span>
+        <select class="input" id="aw-category">
+          <option value="${AWARD_GENERAL}">🎯 综合（等级 / 累计总次数等跨领域）</option>
+          ${state.categories.map(c => `<option value="${c.id}" ${initialCat === c.id ? 'selected' : ''}>${UI.esc(c.icon)} ${UI.esc(c.name)}</option>`).join('')}
+        </select>
+      </label>` : ''}
       <label class="field field-full">
         <span class="field-label">描述（可选）</span>
         <div class="input-with-btn">
@@ -266,6 +449,7 @@ function openAwardForm(kind, itemId) {
             condition,
           };
           if (isAch) {
+            data.categoryId = UI.$('#aw-category', m).value;
             const rExp = Math.max(0, parseFloat(UI.$('#aw-reward-exp', m).value) || 0);
             const rCoins = Math.max(0, parseFloat(UI.$('#aw-reward-coins', m).value) || 0);
             data.rewards = { exp: rExp, coins: rCoins };
@@ -280,12 +464,12 @@ function openAwardForm(kind, itemId) {
             if (conditionProgress(condition).done) {
               if (isAch) {
                 const ups = grantAchievement(entry);
-                const rw = entry.rewards || {};
+                // 与全站统一：走智能过场小窗
                 setTimeout(() => {
-                  UI.toast(`🏆 成就已解锁：${UI.esc(entry.icon)} ${UI.esc(entry.name)}` +
-                    (rw.exp || rw.coins ? `（+${fmtNum(rw.exp)} EXP +${fmtNum(rw.coins)} 🪙）` : ''), 'unlock', 3600);
-                  ups.forEach(([from, to], i) => setTimeout(() => UI.levelUpOverlay(from, to), 300 + i * 400));
-                }, 100);
+                  Cutscene.achievement(entry);
+                  ups.forEach(([from, to]) => Cutscene.levelUp(from, to));
+                  Cutscene.play();
+                }, 120);
               } else {
                 entry.unlocked = true;
                 entry.unlockedAt = Date.now();
@@ -306,15 +490,33 @@ function openAwardForm(kind, itemId) {
   const aSel = UI.$('#aw-cond-attribute', mask);
   const vInput = UI.$('#aw-cond-value', mask);
   const descEl = UI.$('#aw-cond-desc', mask);
+  const catSel = isAch ? UI.$('#aw-category', mask) : null;
 
-  const sync = () => {
+  /** 按当前表单条件智能联动领域选择 */
+  const syncCategory = () => {
+    if (!catSel) return;
+    catSel.value = inferAwardCategory({
+      type: typeSel.value,
+      behaviorId: bSel.value,
+      attribute: aSel.value,
+    });
+  };
+
+  const sync = ({ autoCat = false } = {}) => {
     const needs = condNeeds(typeSel.value);
     bSel.style.display = needs.includes('behaviorId') ? '' : 'none';
     aSel.style.display = needs.includes('attribute') ? '' : 'none';
     vInput.style.display = needs.includes('value') ? '' : 'none';
     descEl.textContent = (CONFIG.conditionTypes[typeSel.value] || {}).desc || '';
+    if (autoCat) syncCategory();
   };
-  typeSel.addEventListener('change', sync);
+
+  // 条件类型 / 行为 / 属性变化时，自动更新所属领域
+  typeSel.addEventListener('change', () => sync({ autoCat: true }));
+  if (catSel) {
+    bSel.addEventListener('change', syncCategory);
+    aSel.addEventListener('change', syncCategory);
+  }
   UI.iconPicker(mask, UI.$('#aw-icon', mask));
 
   // 智能生成描述
@@ -323,5 +525,5 @@ function openAwardForm(kind, itemId) {
     if (!name) { UI.toast('请先填写名称', 'error'); return; }
     UI.$('#aw-desc', mask).value = UI.generateDescription(name, isAch ? 'achievement' : 'title');
   });
-  sync();
+  sync(); // 初始化（领域保持 initialCat，不自动覆盖）
 }

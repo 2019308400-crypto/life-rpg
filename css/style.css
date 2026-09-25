@@ -1276,3 +1276,56 @@ select.input { appearance: auto; }
   }
   .cs-float { display: none; }
 }
+
+/* ============================================================
+ * 成就领域分组 / 筛选 chip 计数
+ * ============================================================ */
+
+/* chip 里的小计数胶囊 */
+.chip-n {
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  line-height: 1.5;
+  min-width: 18px;
+  text-align: center;
+  background: rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  padding: 0 6px;
+  margin-left: 2px;
+}
+.chip.active .chip-n { background: rgba(139, 92, 246, .4); }
+
+/* 领域第二行 chip 与上一行挨近一些 */
+.chip-row-cats { margin: -4px 0 14px; }
+
+/* 领域分组 */
+.award-group { display: flex; flex-direction: column; gap: 12px; }
+.award-group + .award-group { margin-top: 22px; }
+.award-group-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 2px 2px 6px;
+  border-bottom: 2px solid var(--border);
+  position: relative;
+}
+.award-group-head::after {
+  content: '';
+  position: absolute; left: 0; bottom: -2px;
+  width: 72px; height: 2px;
+  background: var(--cat-color, var(--purple));
+  border-radius: 2px;
+}
+.agh-icon { font-size: 19px; line-height: 1; }
+.agh-name {
+  font-size: 15px; font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--cat-color, var(--text));
+}
+.agh-count {
+  margin-left: auto;
+  font-size: 12px; font-weight: 700;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 10px;
+}
