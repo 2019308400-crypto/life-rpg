@@ -73,9 +73,12 @@ Pages.shop = {
           { danger: false, okText: '购买' });
         if (!ok) return;
         const res = buyItem(id);
-        if (res.ok) UI.toast(`🎉 已购买「${UI.esc(item.name)}」，好好享受！`, 'success');
-        else UI.toast(`⚠️ ${res.reason}`, 'error');
         App.refresh();
+        if (res.ok) {
+          // 智能过场：奶茶→喝、游戏→手柄、礼物→礼盒……按名字自动匹配
+          Cutscene.purchase(item.name, item.icon, item.price);
+          Cutscene.play();
+        } else UI.toast(`⚠️ ${res.reason}`, 'error');
       });
       card.querySelector('.act-item-edit').addEventListener('click', () => openShopItemForm(id));
       card.querySelector('.act-item-del').addEventListener('click', async () => {

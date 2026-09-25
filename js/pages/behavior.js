@@ -107,23 +107,20 @@ function openCompleteForm(behaviorId) {
   renderPreview();
 }
 
-/** 完成后的反馈：奖励 Toast → 成就/称号 → LEVEL UP 特效 → 刷新页面 */
+/**
+ * 完成后的反馈：智能过场动画小窗排队播放
+ * 顺序：行为完成 → 成就解锁 → 称号获得 → 升级（点击卡片可跳过）
+ */
 function showCompleteFeedback(result) {
   if (!result) return;
-  UI.rewardToast(result.gained);
-  const delay = 400;
-  result.unlockedAchievements.forEach((a, i) => {
-    const r = a.rewards || {};
-    const rewardTxt = (r.exp || r.coins) ? `  🎁 +${fmtNum(r.exp)} EXP +${fmtNum(r.coins)} 🪙` : '';
-    setTimeout(() => UI.toast(`🏆 解锁成就：${UI.esc(a.icon)} ${UI.esc(a.name)}${rewardTxt}`, 'unlock', 3600), delay + i * 500);
-  });
-  const base = delay + result.unlockedAchievements.length * 500;
-  result.unlockedTitles.forEach((t, i) =>
-    setTimeout(() => UI.toast(`👑 获得称号：${UI.esc(t.icon)} ${UI.esc(t.name)}`, 'unlock', 3600), base + i * 500));
-  const base2 = base + result.unlockedTitles.length * 500;
-  result.levelUps.forEach(([from, to], i) =>
-    setTimeout(() => UI.levelUpOverlay(from, to), base2 + i * 400));
-  if (typeof App !== 'undefined' && App.refresh) setTimeout(() => App.refresh(), 80);
+  // 先刷新数据（过场层独立于页面，不受重渲染影响）
+  if (typeof App !== 'undefined' && App.refresh) App.refresh();
+
+  Cutscene.behavior(result.record.behaviorName, result.record.behaviorIcon, result.gained);
+  result.unlockedAchievements.forEach(a => Cutscene.achievement(a));
+  result.unlockedTitles.forEach(t => Cutscene.title(t));
+  result.levelUps.forEach(([from, to]) => Cutscene.levelUp(from, to));
+  Cutscene.play();
 }
 
 /* ================= 行为页 ================= */
