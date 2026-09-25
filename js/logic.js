@@ -188,10 +188,62 @@ function removeRecord(recordId) {
 
 /** 今日汇总（从历史记录实时统计，天然与记录一致） */
 function todayStats() {
-  const today = dateKey();
+  return periodStats('day', new Date());
+}
+
+/* ---------- 周期统计（日 / 周 / 月） ---------- */
+
+const WEEKDAYS_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+/**
+ * 周期范围：{ start(00:00), end(23:59:59.999) }
+ * 周以周一为起点（国内习惯）
+ */
+function periodRange(period, base) {
+  const b = base ? new Date(base) : new Date();
+  if (period === 'day') {
+    const start = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    const end = new Date(b.getFullYear(), b.getMonth(), b.getDate(), 23, 59, 59, 999);
+    return { start, end };
+  }
+  if (period === 'week') {
+    const dow = b.getDay(); // 0=周日
+    const diff = dow === 0 ? -6 : 1 - dow; // 回到本周一
+    const start = new Date(b.getFullYear(), b.getMonth(), b.getDate() + diff);
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
+    return { start, end };
+  }
+  // month：本月1号 ~ 本月最后一天
+  const start = new Date(b.getFullYear(), b.getMonth(), 1);
+  const end = new Date(b.getFullYear(), b.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+}
+
+/** 周期偏移后的基准日期（offset: 0=当前, -1=上一个, 1=下一个） */
+function shiftedBase(period, offset) {
+  const b = new Date();
+  if (period === 'day') b.setDate(b.getDate() + offset);
+  else if (period === 'week') b.setDate(b.getDate() + offset * 7);
+  else b.setMonth(b.getMonth() + offset);
+  return b;
+}
+
+/** 周期文字标签 */
+function periodLabel(period, base) {
+  const { start, end } = periodRange(period, base);
+  const md = d => `${d.getMonth() + 1}/${d.getDate()}`;
+  if (period === 'day') return `${dateKey(start)} ${WEEKDAYS_CN[start.getDay()]}`;
+  if (period === 'week') return `${md(start)} ~ ${md(end)}`;
+  return `${start.getFullYear()}年${start.getMonth() + 1}月`;
+}
+
+/** 汇总指定周期内的全部奖励 */
+function periodStats(period, base) {
+  const { start, end } = periodRange(period, base);
   const stats = { exp: 0, coins: 0, health: 0, intelligence: 0, fitness: 0, discipline: 0, completions: 0 };
   state.history.forEach(r => {
-    if (dateKey(new Date(r.time)) !== today) return;
+    const t = new Date(r.time);
+    if (t < start || t > end) return;
     stats.exp += r.gained.exp;
     stats.coins += r.gained.coins;
     CONFIG.attributes.forEach(a => { stats[a.key] += r.gained[a.key] || 0; });
@@ -199,6 +251,50 @@ function todayStats() {
   });
   CONFIG.attributes.forEach(a => { stats[a.key] = Math.round(stats[a.key] * 10) / 10; });
   return stats;
+}
+
+/**
+ * 记录分组键
+ * day → YYYY-MM-DD；week → 该周周一的 YYYY-MM-DD；month → YYYY-MM
+ */
+function groupKeyOf(ts, period) {
+  const d = new Date(ts);
+  if (period === 'day') return dateKey(d);
+  if (period === 'month') return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return dateKey(periodRange('week', d).start);
+}
+
+/** 分组标题 */
+function groupLabel(key, period) {
+  if (period === 'day') {
+    const d = new Date(key + 'T00:00:00');
+    const todayK = dateKey();
+    const yest = new Date(); yest.setDate(yest.getDate() - 1);
+    const tag = key === todayK ? ' · 今天' : key === dateKey(yest) ? ' · 昨天' : '';
+    return `${key} ${WEEKDAYS_CN[d.getDay()]}${tag}`;
+  }
+  if (period === 'month') {
+    const [y, m] = key.split('-');
+    return `${y}年${parseInt(m, 10)}月`;
+  }
+  const monday = new Date(key + 'T00:00:00');
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  const md = d => `${d.getMonth() + 1}/${d.getDate()}`;
+  return `📅 ${md(monday)} ~ ${md(sunday)}`;
+}
+
+/** 汇总任意一组记录的奖励（分组标题用） */
+function sumRecords(records) {
+  const s = { exp: 0, coins: 0, health: 0, intelligence: 0, fitness: 0, discipline: 0, completions: records.length };
+  records.forEach(r => {
+    s.exp += r.gained.exp || 0;
+    s.coins += r.gained.coins || 0;
+    CONFIG.attributes.forEach(a => { s[a.key] += r.gained[a.key] || 0; });
+  });
+  CONFIG.attributes.forEach(a => { s[a.key] = Math.round(s[a.key] * 10) / 10; });
+  s.exp = Math.round(s.exp * 10) / 10;
+  s.coins = Math.round(s.coins * 10) / 10;
+  return s;
 }
 
 /** 某行为的累计次数 / 累计数量 */
