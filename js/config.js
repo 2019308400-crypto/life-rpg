@@ -1,4 +1,4 @@
-﻿﻿/* ============================================================
+﻿/* ============================================================
  * LIFE RPG - 全局配置
  * 所有"可以修改"的东西都集中在这里。
  * 页面代码不会写死任何奖励数字，全部读取这里或用户自建数据。
@@ -34,6 +34,18 @@ const CONFIG = {
     fixed:    { name: '固定奖励', desc: '每完成一次，获得固定奖励' },
     per_unit: { name: '按数量',   desc: '按填写的数量计算，例如每 1 公里' },
     per_time: { name: '按时间',   desc: '按记录的分钟数计算，例如每 30 分钟' },
+  },
+
+  /* ---------- 每日任务 ----------
+   * 每天早上 resetHour 点之后进入新的一天（0点~6点仍算前一天）
+   * 全清宝箱：完成当天全部任务后可开启，奖励随机（数额小，防止通胀）
+   * 临时小任务默认奖励（用户创建时可自行修改）
+   */
+  daily: {
+    resetHour: 6,
+    chest: { expMin: 50, expMax: 150, coinsMin: 20, coinsMax: 80 },
+    customDefault: { exp: 10, coins: 5 },
+    keepDays: 60, // 本地保留多少天的每日清单（更早的自动清理）
   },
 
   /* ---------- 成就 / 称号 可用的条件类型 ---------- */
@@ -360,7 +372,7 @@ const CONFIG = {
         icon: '📄',
         categoryId: 'cat_study',
         description: '翻开第一页，故事的齿轮开始转动',
-        condition: { type: 'first_complete', behaviorId: 'bh_read', attribute: '', value: 0 },
+        condition: { type: 'first_complete', behaviorId: 'bh_read', attribute: '', value: 1 },
         rewards: { exp: 50, coins: 10 },
       },
       {
@@ -415,7 +427,7 @@ const CONFIG = {
         icon: '👣',
         categoryId: 'cat_sport',
         description: '最远的旅程，也从脚下这一步开始',
-        condition: { type: 'first_complete', behaviorId: 'bh_run', attribute: '', value: 0 },
+        condition: { type: 'first_complete', behaviorId: 'bh_run', attribute: '', value: 1 },
         rewards: { exp: 50, coins: 10 },
       },
       {
@@ -470,7 +482,7 @@ const CONFIG = {
         icon: '🌛',
         categoryId: 'cat_life',
         description: '第一次和夜晚和解，梦都是甜的',
-        condition: { type: 'first_complete', behaviorId: 'bh_sleep', attribute: '', value: 0 },
+        condition: { type: 'first_complete', behaviorId: 'bh_sleep', attribute: '', value: 1 },
         rewards: { exp: 50, coins: 10 },
       },
       {

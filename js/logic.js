@@ -150,6 +150,9 @@ function completeBehavior(behaviorId, quantity) {
     if (!a.items.length && !t.items.length) break;
   }
 
+  // 联动：若该行为在"当日清单"里且本次数量达标，自动打勾
+  syncDailyAfterComplete(record);
+
   saveState();
   return {
     gained,
@@ -180,6 +183,8 @@ function removeRecord(recordId) {
   const levelDowns = removeExp(Number(gained.exp) || 0);
 
   state.history.splice(idx, 1);
+  // 联动：撤回记录后，对应的每日任务取消打勾（宝箱已开则保持已开）
+  uncheckDailyTask(recordId);
   saveState();
   return { gained, levelDowns };
 }
@@ -353,6 +358,8 @@ function conditionProgress(cond) {
     case 'streak':            cur = streakOf(c.behaviorId); break;
     default: cur = 0;
   }
+  // first_complete 是布尔事件：完成过即算（与 value 无关，防止 value=0 时凭空满足）
+  if (c.type === 'first_complete') return { current: cur, target: 1, done: cur >= 1 };
   return { current: cur, target: val, done: cur >= val };
 }
 
@@ -438,4 +445,240 @@ function cleanTitleRef() {
   if (state.player.titleId && !state.titles.find(t => t.id === state.player.titleId)) {
     state.player.titleId = null;
   }
+}
+
+/* ============================================================
+ * 每日任务引擎
+ * ------------------------------------------------------------
+ * state.daily = {
+ *   'YYYY-MM-DD': {
+ *     tasks: [{
+ *       id, kind:'behavior'|'custom',
+ *       behaviorId, name(快照), icon, target(目标量), unit,
+ *       rewards:{exp,coins},   // 仅临时任务
+ *       done, doneAt, recordId // 关联历史记录（库行为）
+ *     }],
+ *     chest: { opened, time, rewards }
+ *   }
+ * }
+ * ============================================================ */
+
+/**
+ * 每日日期键：早上 6:00 分界。
+ * 0:00~5:59 仍算前一天；6:00 之后算当天。
+ */
+function dailyKey(when) {
+  const d = when ? new Date(when) : new Date();
+  if (d.getHours() < (CONFIG.daily.resetHour || 6)) d.setDate(d.getDate() - 1);
+  return dateKey(d);
+}
+
+/**
+ * 相对今天偏移 N 个"每日日"的键（offset: 0=今天, 1=明天, -1=昨天）。
+ * 以当天正午为锚点计算，避免在分界时刻附近算错。
+ */
+function dailyKeyOffset(offset) {
+  const now = new Date();
+  const anchor = now.getHours() < (CONFIG.daily.resetHour || 6)
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12)
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+  anchor.setDate(anchor.getDate() + offset);
+  return dateKey(anchor);
+}
+
+/** 取得某天的清单（没有则新建空结构） */
+function ensureDaily(key) {
+  if (!state.daily) state.daily = {};
+  if (!state.daily[key]) {
+    state.daily[key] = { tasks: [], chest: { opened: false, time: null, rewards: null } };
+  }
+  return state.daily[key];
+}
+
+/** 库行为的默认今日目标量 */
+function defaultDailyTarget(b) {
+  if (b.rewardType === 'fixed') return 1;
+  if (b.rewardType === 'per_time') return b.perTimeMinutes || 30;
+  return 1; // per_unit
+}
+
+/** 当天全部任务是否已完成（至少 1 项） */
+function dailyAllDone(day) {
+  return day && day.tasks.length > 0 && day.tasks.every(t => t.done);
+}
+
+/**
+ * 从行为库添加任务到指定日期。
+ * @returns 任务对象；重复添加返回 { duplicated:true }
+ */
+function addBehaviorDailyTask(key, behaviorId, target) {
+  const b = state.behaviors.find(x => x.id === behaviorId);
+  if (!b) return null;
+  const day = ensureDaily(key);
+  if (day.tasks.some(t => t.kind === 'behavior' && t.behaviorId === behaviorId)) {
+    return { duplicated: true };
+  }
+  const t = {
+    id: uid(),
+    kind: 'behavior',
+    behaviorId: b.id,
+    name: b.name, // 快照：库中改名/删除后清单仍可读
+    icon: b.icon,
+    target: Number(target) > 0 ? Number(target) : defaultDailyTarget(b),
+    unit: b.unit || '',
+    rewards: null,
+    done: false,
+    doneAt: null,
+    recordId: null,
+  };
+  day.tasks.push(t);
+  saveState();
+  return t;
+}
+
+/**
+ * 添加临时小任务（拿快递等一次性小事）。
+ * @param {{name,icon,exp,coins}} data 奖励自定义
+ */
+function addCustomDailyTask(key, data) {
+  const day = ensureDaily(key);
+  const t = {
+    id: uid(),
+    kind: 'custom',
+    behaviorId: '',
+    name: data.name,
+    icon: data.icon || '📝',
+    target: 1,
+    unit: '',
+    rewards: {
+      exp: Math.max(0, Number(data.exp) || 0),
+      coins: Math.max(0, Number(data.coins) || 0),
+    },
+    done: false,
+    doneAt: null,
+    recordId: null,
+  };
+  day.tasks.push(t);
+  saveState();
+  return t;
+}
+
+/** 删除某日的某条任务 */
+function removeDailyTask(key, taskId) {
+  const day = state.daily[key];
+  if (!day) return;
+  day.tasks = day.tasks.filter(t => t.id !== taskId);
+  saveState();
+}
+
+/** 修改库行为任务的今日目标量（已完成不可改） */
+function updateDailyTarget(key, taskId, target) {
+  const day = state.daily[key];
+  const t = day && day.tasks.find(x => x.id === taskId);
+  if (!t || t.kind !== 'behavior' || t.done) return;
+  if (Number(target) > 0) { t.target = Number(target); saveState(); }
+}
+
+/**
+ * 完成一条每日任务。
+ * - 库行为：按目标量走完整结算 completeBehavior（其内部钩子自动打勾）
+ * - 临时任务：直接发放自定义 EXP/金币
+ * 返回可供过场播放的结果；行为已被删除返回 { missing:true }
+ */
+function completeDailyTask(key, taskId) {
+  const day = ensureDaily(key);
+  const t = day.tasks.find(x => x.id === taskId);
+  if (!t || t.done) return null;
+
+  if (t.kind === 'behavior') {
+    const b = state.behaviors.find(x => x.id === t.behaviorId);
+    if (!b) return { missing: true };
+    return completeBehavior(t.behaviorId, t.target);
+  }
+  // 临时任务
+  const r = t.rewards || {};
+  const gained = {
+    exp: Math.max(0, Number(r.exp) || 0),
+    coins: Math.max(0, Number(r.coins) || 0),
+  };
+  state.player.coins += gained.coins;
+  const levelUps = addExp(gained.exp);
+  t.done = true;
+  t.doneAt = Date.now();
+  saveState();
+  return { custom: true, task: t, gained, levelUps };
+}
+
+/** 复制今天的清单到明天（跳过重复项；不复制完成状态） */
+function copyDailyToTomorrow() {
+  const today = state.daily[dailyKey()];
+  const tKey = dailyKeyOffset(1);
+  const tomorrow = ensureDaily(tKey);
+  let n = 0;
+  (today ? today.tasks : []).forEach(t => {
+    const dup = t.kind === 'behavior'
+      ? tomorrow.tasks.some(x => x.kind === 'behavior' && x.behaviorId === t.behaviorId)
+      : tomorrow.tasks.some(x => x.kind === 'custom' && x.name === t.name);
+    if (!dup) {
+      tomorrow.tasks.push({
+        ...t,
+        id: uid(),
+        rewards: t.rewards ? { ...t.rewards } : null,
+        done: false, doneAt: null, recordId: null,
+      });
+      n += 1;
+    }
+  });
+  saveState();
+  return n;
+}
+
+/**
+ * 开启当日全清宝箱：随机 EXP + 金币（区间在 config.daily.chest）。
+ * 未全清 / 已开过 → null。
+ */
+function openDailyChest(key) {
+  const day = ensureDaily(key);
+  if (!dailyAllDone(day) || day.chest.opened) return null;
+  const c = CONFIG.daily.chest;
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const gained = {
+    exp: randInt(c.expMin, c.expMax),
+    coins: randInt(c.coinsMin, c.coinsMax),
+  };
+  state.player.coins += gained.coins;
+  const levelUps = addExp(gained.exp);
+  day.chest = { opened: true, time: Date.now(), rewards: { ...gained } };
+  saveState();
+  return { gained, levelUps };
+}
+
+/* ---------- 联动钩子（completeBehavior / removeRecord 调用） ---------- */
+
+/** 完成行为后：当天清单里同行为、数量达标且未打勾的任务 → 自动完成 */
+function syncDailyAfterComplete(record) {
+  const day = state.daily[dailyKey(record.time)];
+  if (!day) return;
+  day.tasks.forEach(t => {
+    if (t.kind === 'behavior' && !t.done && t.behaviorId === record.behaviorId) {
+      if ((Number(record.quantity) || 0) >= (Number(t.target) || 0)) {
+        t.done = true;
+        t.doneAt = record.time;
+        t.recordId = record.id;
+      }
+    }
+  });
+}
+
+/** 撤回历史记录后：关联任务取消打勾（宝箱已开则保持） */
+function uncheckDailyTask(recordId) {
+  Object.values(state.daily || {}).forEach(day => {
+    day.tasks.forEach(t => {
+      if (t.recordId === recordId) {
+        t.done = false;
+        t.doneAt = null;
+        t.recordId = null;
+      }
+    });
+  });
 }

@@ -369,6 +369,17 @@ const Cutscene = (() => {
       <span class="cs-float cs-f3">✨</span>`;
   }
 
+  /** 每日宝箱：礼盒迸发 + 金币星光飞溅 */
+  function chestStage() {
+    return `
+      <span class="cs-rays2"></span>
+      <div class="cs-shadow"></div>
+      <div class="cs-hero"><span class="cs-i cs-anim-burst-bob">🎁</span></div>
+      <span class="cs-float cs-f1">🪙</span>
+      <span class="cs-float cs-f2">✨</span>
+      <span class="cs-float cs-f3">⭐</span>`;
+  }
+
   /* ================= 奖励文字 ================= */
 
   /** 行为奖励行：+EXP / +金币 / +属性 */
@@ -515,6 +526,18 @@ const Cutscene = (() => {
         stage: levelStage(),
         meta: '你又变强了一点',
         dur: 1900,
+      });
+    },
+
+    /** 每日全清宝箱 */
+    treasure(gained) {
+      enqueue({
+        kind: 'treasure',
+        tag: '🎁 每日宝箱 · 今日全清',
+        name: '全清奖励',
+        stage: chestStage(),
+        meta: gainMeta(gained),
+        dur: 2400,
       });
     },
 
