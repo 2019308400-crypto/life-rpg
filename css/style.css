@@ -1621,3 +1621,58 @@ select.input { appearance: auto; }
   .cal-mini { font-size: 9px; }
   .cal-leg-hint { display: none; }
 }
+
+/* ================= 成就·待领取 ================= */
+
+/* 待领取卡片：金色脉动边框 + 整卡可点 */
+.award-card.claim-ready {
+  cursor: pointer;
+  border-color: rgba(240, 184, 64, .7);
+  background: linear-gradient(180deg, rgba(240, 184, 64, .10), var(--card-2));
+  animation: claimPulse 1.7s ease-in-out infinite;
+}
+.award-card.claim-ready:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.award-card.claim-ready:active { transform: scale(.985); }
+
+@keyframes claimPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 184, 64, .28), var(--shadow); }
+  50%      { box-shadow: 0 0 20px 2px rgba(240, 184, 64, .22), var(--shadow); }
+}
+
+.award-card.claim-ready .award-icon.glow {
+  box-shadow: 0 0 22px rgba(240, 184, 64, .6);
+  border-color: var(--gold);
+}
+
+/* 待领取标签 */
+.ready-tag {
+  font-size: 11px; font-weight: 700;
+  color: var(--gold-2);
+  background: rgba(240, 184, 64, .14);
+  border: 1px solid rgba(240, 184, 64, .55);
+  padding: 1px 8px; border-radius: 999px;
+  animation: readyTagBlink 1.7s ease-in-out infinite;
+}
+@keyframes readyTagBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .62; }
+}
+
+/* 待领取时进度条满格更亮 */
+.award-fill.fill-ready {
+  background: linear-gradient(90deg, var(--gold), #fff0b8);
+  box-shadow: 0 0 10px rgba(240, 184, 64, .55);
+}
+
+/* 顶部「待领取」chip 有数字时金色提示（未选中状态下） */
+.chip.chip-alert:not(.active) {
+  color: var(--gold-2);
+  border-color: rgba(240, 184, 64, .5);
+}
+.chip.chip-alert:not(.active) .chip-n {
+  background: rgba(240, 184, 64, .22);
+  color: var(--gold-2);
+}

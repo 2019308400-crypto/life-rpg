@@ -1,5 +1,5 @@
 ﻿﻿﻿﻿// LIFE RPG Service Worker - 离线缓存
-const CACHE = 'life-rpg-v1-20260928a';
+const CACHE = 'life-rpg-v1-20260928b';
 const ASSETS = [
   './',
   './index.html',

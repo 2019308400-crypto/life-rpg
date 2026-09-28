@@ -63,10 +63,14 @@ function awardCatInfo(cid) {
            : fallback;
 }
 
-/** 状态筛选是否命中：status = all | unlocked | locked */
+/**
+ * 状态筛选是否命中：
+ * all 全部 | ready 待领取 | pending 未达成（待领取+未达成，默认） | unlocked 已达成
+ */
 function matchStatus(item, status) {
   if (status === 'unlocked') return !!item.unlocked;
-  if (status === 'locked') return !item.unlocked;
+  if (status === 'ready') return !item.unlocked && !!item.claimReady;
+  if (status === 'pending') return !item.unlocked;
   return true;
 }
 
@@ -80,7 +84,7 @@ function progressPct(item) {
 
 Pages.awards = {
   tab: 'achievement',   // 'achievement' | 'title'
-  achStatus: 'all',     // all | unlocked | locked
+  achStatus: 'pending', // all | ready(待领取) | pending(未达成,默认) | unlocked
   achCat: 'all',        // all | 分类 id
   titleStatus: 'all',   // all | unlocked | locked
 
@@ -97,7 +101,7 @@ Pages.awards = {
         </div>
 
         <div class="tab-row">
-          <button class="tab ${isAch ? 'active' : ''}" data-tab="achievement">🎖️ 成就 <span class="tab-count">${state.achievements.filter(a => a.unlocked).length}/${state.achievements.length}</span></button>
+          <button class="tab ${isAch ? 'active' : ''}" data-tab="achievement">🎖️ 成就 <span class="tab-count">${state.achievements.length - state.achievements.filter(a => a.unlocked).length}/${state.achievements.length}</span></button>
           <button class="tab ${!isAch ? 'active' : ''}" data-tab="title">👑 称号 <span class="tab-count">${state.titles.filter(t => t.unlocked).length}/${state.titles.length}</span></button>
         </div>
 
@@ -151,7 +155,37 @@ Pages.awards = {
         UI.toast(state.player.titleId ? `👑 已佩戴「${UI.esc(item.name)}」` : '已卸下称号', 'success');
         App.refresh();
       });
+
+      // 待领取成就：整卡点击即领取（右上角编辑/删除按钮除外）
+      if (kind === 'achievement' && item.claimReady && !item.unlocked) {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.award-actions')) return;
+          this.claimAward(id, view);
+        });
+      }
     });
+  },
+
+  /** 手动领取成就奖励：发奖 → 折叠进已达成 → 过场 + toast */
+  claimAward(id, view) {
+    const item = state.achievements.find(x => x.id === id);
+    if (!item || item.unlocked || !item.claimReady) return;
+    const name = item.name;
+    const r = item.rewards || {};
+    const res = claimAchievement(item);
+    if (!res) return;
+    saveState();
+    App.refresh();
+    this.render(view); // 当前筛选不含已达成 → 卡片自动折叠消失
+
+    // 领取反馈：成就过场 + 升级过场
+    Cutscene.achievement(item);
+    res.levelUps.forEach(([from, to]) => Cutscene.levelUp(from, to));
+    Cutscene.play();
+    const rewardTxt =
+      `<span class="rw rw-exp">+${fmtNum(r.exp)} EXP</span> ` +
+      `<span class="rw rw-coin">+${fmtNum(r.coins)} 🪙</span>`;
+    UI.toast(`🎖️「${UI.esc(name)}」成就达成！奖励已领取 ${rewardTxt}`, 'reward', 3000);
   },
 
   /* ---------- 筛选 chip ---------- */
@@ -161,11 +195,12 @@ Pages.awards = {
     const aList = state.achievements;
     const n = {
       all: aList.length,
+      ready: aList.filter(a => !a.unlocked && a.claimReady).length,
+      pending: aList.filter(a => !a.unlocked).length,
       unlocked: aList.filter(a => a.unlocked).length,
-      locked: aList.filter(a => !a.unlocked).length,
     };
-    const statusChip = (val, label) =>
-      `<button class="chip ${this.achStatus === val ? 'active' : ''}" data-ach-status="${val}">${label} <span class="chip-n">${n[val]}</span></button>`;
+    const statusChip = (val, label, extraCls = '') =>
+      `<button class="chip ${this.achStatus === val ? 'active' : ''} ${extraCls}" data-ach-status="${val}">${label} <span class="chip-n">${n[val]}</span></button>`;
 
     // 状态筛选后出现过的领域，按用户分类顺序排列，综合最后
     const statusFiltered = aList.filter(a => matchStatus(a, this.achStatus));
@@ -182,8 +217,9 @@ Pages.awards = {
     return `
       <div class="chip-row">
         ${statusChip('all', '📋 全部')}
+        ${statusChip('ready', '🟡 待领取', n.ready ? 'chip-alert' : '')}
+        ${statusChip('pending', '🔒 未达成')}
         ${statusChip('unlocked', '✅ 已达成')}
-        ${statusChip('locked', '🔒 未达成')}
       </div>
       ${orderedCats.length ? `
       <div class="chip-row chip-row-cats">
@@ -237,36 +273,57 @@ Pages.awards = {
       const info = awardCatInfo(cid);
       const items = groups.get(cid);
 
-      // 组内：已达成在前（按解锁时间新→旧）；未达成在后（按进度高→低）
+      // 组内顺序：待领取最前（先达成的在前）→ 未达成（进度高→低）→ 已达成（最后）
       items.sort((x, y) => {
-        if (!!x.unlocked !== !!y.unlocked) return x.unlocked ? -1 : 1;
+        const xr = !x.unlocked && !!x.claimReady;
+        const yr = !y.unlocked && !!y.claimReady;
+        if (xr !== yr) return xr ? -1 : 1;
+        if (xr) return (x.readyAt || 0) - (y.readyAt || 0);
+        if (!!x.unlocked !== !!y.unlocked) return x.unlocked ? 1 : -1;
         if (x.unlocked) return (y.unlockedAt || 0) - (x.unlockedAt || 0);
         return progressPct(y) - progressPct(x);
       });
 
-      const unlockedN = items.filter(a => a.unlocked).length;
+      // 组计数：该领域全部成就里 未达成/总数（不受当前筛选影响，更直观）
+      const catAll = state.achievements.filter(a => awardCategoryId(a) === cid);
+      const claimed = catAll.filter(a => a.unlocked).length;
       return `
       <section class="award-group">
         <div class="award-group-head" style="--cat-color:${info.color}">
           <span class="agh-icon">${UI.esc(info.icon)}</span>
           <span class="agh-name">${UI.esc(info.name)}</span>
-          <span class="agh-count">${unlockedN}/${items.length}</span>
+          <span class="agh-count">${catAll.length - claimed}/${catAll.length}</span>
         </div>
         ${items.map(a => this.achCard(a)).join('')}
       </section>`;
     }).join('');
   },
 
-  /** 单个成就卡片 */
+  /** 单个成就卡片：待领取(claim-ready) / 未达成(locked) / 已达成(unlocked) */
   achCard(a) {
     const prog = conditionProgress(a.condition);
     const pct = Math.min(100, prog.target > 0 ? (prog.current / prog.target) * 100 : (prog.done ? 100 : 0));
+    const isReady = !a.unlocked && !!a.claimReady;
+
+    const cls = ['card', 'award-card'];
+    if (a.unlocked) cls.push('unlocked');
+    else if (isReady) cls.push('claim-ready');
+    else cls.push('locked');
+
+    const iconCls = a.unlocked || isReady ? 'glow' : 'gray';
+
+    const tag = a.unlocked ? '<span class="unlock-tag">已解锁</span>'
+      : isReady ? '<span class="ready-tag">🟡 待领取 · 点击卡片领取</span>'
+      : '<span class="lock-tag">🔒 未解锁</span>';
+
+    const fillCls = isReady ? 'award-fill fill-ready' : 'award-fill';
+
     return `
-      <div class="card award-card ${a.unlocked ? 'unlocked' : ''}" data-award-kind="achievement" data-award-id="${a.id}">
+      <div class="${cls.join(' ')}" data-award-kind="achievement" data-award-id="${a.id}">
         <div class="award-main">
-          <span class="award-icon ${a.unlocked ? 'glow' : 'gray'}">${UI.esc(a.icon || '🎖️')}</span>
+          <span class="award-icon ${iconCls}">${UI.esc(a.icon || '🎖️')}</span>
           <div class="award-info">
-            <div class="award-name">${UI.esc(a.name)} ${a.unlocked ? '<span class="unlock-tag">已解锁</span>' : '<span class="lock-tag">🔒 未解锁</span>'}</div>
+            <div class="award-name">${UI.esc(a.name)} ${tag}</div>
             ${a.description ? `<div class="award-desc">${UI.esc(a.description)}</div>` : ''}
             <div class="award-cond">${UI.esc(conditionText(a.condition))}</div>
             <div class="award-reward-line">
@@ -274,7 +331,7 @@ Pages.awards = {
               <b class="ar-coin">+${fmtNum((a.rewards || {}).coins)} 🪙</b>
             </div>
             <div class="award-progress">
-              <div class="award-bar"><div class="award-fill" style="width:${pct}%"></div></div>
+              <div class="award-bar"><div class="${fillCls}" style="width:${pct}%"></div></div>
               <span class="award-nums">${fmtNum(prog.current)} / ${fmtNum(prog.target)}</span>
             </div>
             ${a.unlocked ? `<div class="award-date">解锁于 ${formatTime(a.unlockedAt)}</div>` : ''}
@@ -403,7 +460,7 @@ function openAwardForm(kind, itemId) {
 
       ${isAch ? `
       <div class="field field-full">
-        <span class="field-label">解锁奖励（达成时自动发放，可都填 0）</span>
+        <span class="field-label">达成奖励（点亮后手动领取时发放，可都填 0）</span>
         <div class="reward-row">
           <label class="mini-field"><span>EXP</span>
             <input type="number" class="input" id="aw-reward-exp" min="0" step="any" placeholder="0"
@@ -459,17 +516,12 @@ function openAwardForm(kind, itemId) {
             UI.toast(`${label}已保存`, 'success');
           }
           else {
-            const entry = { id: uid(), ...data, unlocked: false, unlockedAt: null };
-            // 创建即满足条件则立刻解锁；成就同时发放奖励
+            const entry = { id: uid(), ...data, unlocked: false, unlockedAt: null,
+              claimReady: false, readyAt: null };
+            // 创建即满足条件：称号立刻解锁；成就只点亮「待领取」，手动领奖
             if (conditionProgress(condition).done) {
               if (isAch) {
-                const ups = grantAchievement(entry);
-                // 与全站统一：走智能过场小窗
-                setTimeout(() => {
-                  Cutscene.achievement(entry);
-                  ups.forEach(([from, to]) => Cutscene.levelUp(from, to));
-                  Cutscene.play();
-                }, 120);
+                markAchievementReady(entry);
               } else {
                 entry.unlocked = true;
                 entry.unlockedAt = Date.now();

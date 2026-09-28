@@ -109,7 +109,8 @@ function openCompleteForm(behaviorId) {
 
 /**
  * 完成后的反馈：智能过场动画小窗排队播放
- * 顺序：行为完成 → 成就解锁 → 称号获得 → 升级（点击卡片可跳过）
+ * 顺序：行为完成 → 称号获得 → 升级（点击卡片可跳过）
+ * 成就达成只 toast 提示去领取（不再自动发奖、不播成就过场）
  */
 function showCompleteFeedback(result) {
   if (!result) return;
@@ -117,10 +118,17 @@ function showCompleteFeedback(result) {
   if (typeof App !== 'undefined' && App.refresh) App.refresh();
 
   Cutscene.behavior(result.record.behaviorName, result.record.behaviorIcon, result.gained);
-  result.unlockedAchievements.forEach(a => Cutscene.achievement(a));
   result.unlockedTitles.forEach(t => Cutscene.title(t));
   result.levelUps.forEach(([from, to]) => Cutscene.levelUp(from, to));
   Cutscene.play();
+
+  // 新点亮的待领取成就：toast 提醒
+  if (result.readyAchievements && result.readyAchievements.length) {
+    const names = result.readyAchievements
+      .map(a => `${a.icon || '🎖️'} ${a.name}`).join('、');
+    UI.toast(`🟡 ${result.readyAchievements.length} 个成就待领取：${UI.esc(names)}（去「成就」页点击领取）`,
+      'info', 3800);
+  }
 }
 
 /* ================= 行为页 ================= */

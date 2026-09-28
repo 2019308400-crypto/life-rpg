@@ -173,10 +173,12 @@ function loadState() {
       const cutKey = `${cut.getFullYear()}-${pad(cut.getMonth() + 1)}-${pad(cut.getDate())}`;
       Object.keys(merged.daily).forEach(k => { if (k < cutKey) delete merged.daily[k]; });
     }
-    // 迁移：老成就补齐奖励字段
+    // 迁移：老成就补齐奖励字段 + 待领取标记（已解锁的老成就不再待领取）
     merged.achievements = merged.achievements.map(a => ({
       ...a,
       rewards: { exp: 0, coins: 0, ...((a && a.rewards) || {}) },
+      claimReady: a.unlocked ? false : !!a.claimReady,
+      readyAt: a.unlocked ? null : (a.readyAt || null),
     }));
     // 种子合并迁移：补全新描述和新增项
     mergeSeedDefaults(merged);

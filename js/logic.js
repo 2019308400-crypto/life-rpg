@@ -108,7 +108,8 @@ function rewardSummary(behavior) {
 
 /**
  * 完成行为：写入独立历史记录（保存当时实际获得的奖励）、发放奖励、升级、检测成就/称号。
- * 返回 { gained, levelUps, unlockedAchievements, unlockedTitles }
+ * 成就达成只点亮「待领取」，不自动发奖。
+ * 返回 { gained, levelUps, readyAchievements, unlockedTitles }
  */
 function completeBehavior(behaviorId, quantity) {
   const b = state.behaviors.find(x => x.id === behaviorId);
@@ -137,14 +138,14 @@ function completeBehavior(behaviorId, quantity) {
   const levelUps = addExp(gained.exp);
 
   // 检测成就 / 称号（在等级/属性更新后判断）。
-  // 成就奖励的 EXP 可能再次触发升级 → 解锁更多成就/称号，循环直到无新解锁。
-  const unlockedAchievements = [];
+  // 成就只点亮待领取、称号直接解锁；均不再产生额外 EXP，一轮即可，保留循环以防称号链路变化。
+  const readyAchievements = [];
   const unlockedTitles = [];
   const extraLevelUps = [];
   for (let guard = 0; guard < 100; guard++) {
     const a = checkAllUnlockable('achievement');
     const t = checkAllUnlockable('title');
-    unlockedAchievements.push(...a.items);
+    readyAchievements.push(...a.items);
     unlockedTitles.push(...t.items);
     extraLevelUps.push(...a.levelUps);
     if (!a.items.length && !t.items.length) break;
@@ -157,7 +158,7 @@ function completeBehavior(behaviorId, quantity) {
   return {
     gained,
     levelUps: levelUps.concat(extraLevelUps),
-    unlockedAchievements,
+    readyAchievements,
     unlockedTitles,
     record,
   };
@@ -390,21 +391,43 @@ function conditionText(cond) {
 }
 
 /**
- * 解锁成就：标记解锁 + 按成就自身配置发放金币 / EXP（数字由用户设置）。
- * 返回奖励 EXP 引发的升级列表。
+ * 点亮成就：条件已满足，标记「待领取」，但暂不发奖。
+ * 玩家需要在成就页手动点击领取。
  */
-function grantAchievement(item, time) {
-  item.unlocked = true;
-  item.unlockedAt = time || Date.now();
-  const r = item.rewards || {};
-  state.player.coins += Number(r.coins) || 0;
-  return addExp(Number(r.exp) || 0);
+function markAchievementReady(item, time) {
+  item.claimReady = true;
+  item.readyAt = time || Date.now();
 }
 
 /**
- * 检查某类（achievement/title）全部条目，解锁满足条件的新条目。
- * 成就解锁时同时发放其奖励。
- * 返回 { items: 本次解锁条目, levelUps: 成就奖励引发的升级 }。
+ * 领取成就奖励：正式标记解锁 + 按成就自身配置发放金币 / EXP。
+ * 返回 { levelUps: EXP 引发的升级, newlyReady: 发奖后新点亮的成就 }。
+ */
+function claimAchievement(item) {
+  if (!item || item.unlocked || !item.claimReady) return null;
+  item.unlocked = true;
+  item.unlockedAt = Date.now();
+  item.claimReady = false;
+  const r = item.rewards || {};
+  state.player.coins += Number(r.coins) || 0;
+  const levelUps = addExp(Number(r.exp) || 0);
+
+  // 发奖后的 EXP 可能让别的成就达成 / 称号解锁：复检并点亮
+  const newlyReady = [];
+  for (let guard = 0; guard < 100; guard++) {
+    const a = checkAllUnlockable('achievement');
+    const t = checkAllUnlockable('title');
+    newlyReady.push(...a.items);
+    if (!a.items.length && !t.items.length) break;
+  }
+  return { levelUps, newlyReady };
+}
+
+/**
+ * 检查某类（achievement/title）全部条目。
+ * 成就：条件满足时只点亮「待领取」，不自动发奖（玩家手动领取）。
+ * 称号：条件满足即自动解锁（称号无奖励）。
+ * 返回 { items: 本次新点亮/解锁条目, levelUps: 保留字段（恒为空） }。
  */
 function checkAllUnlockable(kind) {
   const list = kind === 'achievement' ? state.achievements : state.titles;
@@ -413,9 +436,14 @@ function checkAllUnlockable(kind) {
   list.forEach(item => {
     if (item.unlocked) return;
     if (conditionProgress(item.condition).done) {
-      items.push(item);
-      if (kind === 'achievement') levelUps.push(...grantAchievement(item));
-      else { item.unlocked = true; item.unlockedAt = Date.now(); }
+      if (kind === 'achievement') {
+        if (item.claimReady) return; // 已点亮待领取，不重复
+        markAchievementReady(item);
+        items.push(item);
+      } else {
+        item.unlocked = true; item.unlockedAt = Date.now();
+        items.push(item);
+      }
     }
   });
   return { items, levelUps };
