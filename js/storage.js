@@ -21,6 +21,7 @@ function defaultState() {
     titles: [],       // { id, name, icon, description, condition, unlocked, unlockedAt }
     shopItems: [],
     purchases: [],    // { id, itemId, itemName, icon, price, time }
+    daily: {},        // { 'YYYY-MM-DD': { tasks:[...], chest:{opened,...} } }（6点分界）
     firstOpen: true,
   };
 }
@@ -162,6 +163,16 @@ function loadState() {
     // 保证数组字段一定存在
     ['categories', 'behaviors', 'history', 'achievements', 'titles', 'shopItems', 'purchases']
       .forEach(k => { if (!Array.isArray(merged[k])) merged[k] = []; });
+    // 每日清单必须是对象
+    if (!merged.daily || typeof merged.daily !== 'object' || Array.isArray(merged.daily)) merged.daily = {};
+    // 清理过期每日清单（按自然日近似即可；storage 早于 logic 加载，这里内联计算）
+    {
+      const cut = new Date();
+      cut.setDate(cut.getDate() - (CONFIG.daily.keepDays || 60));
+      const pad = n => String(n).padStart(2, '0');
+      const cutKey = `${cut.getFullYear()}-${pad(cut.getMonth() + 1)}-${pad(cut.getDate())}`;
+      Object.keys(merged.daily).forEach(k => { if (k < cutKey) delete merged.daily[k]; });
+    }
     // 迁移：老成就补齐奖励字段
     merged.achievements = merged.achievements.map(a => ({
       ...a,

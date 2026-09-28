@@ -205,6 +205,7 @@ const WEEKDAYS_CN = ['周日', '周一', '周二', '周三', '周四', '周五',
  * 周以周一为起点（国内习惯）
  */
 function periodRange(period, base) {
+  if (period === 'calendar') period = 'month'; // 日历视图按月范围统计
   const b = base ? new Date(base) : new Date();
   if (period === 'day') {
     const start = new Date(b.getFullYear(), b.getMonth(), b.getDate());
@@ -226,6 +227,7 @@ function periodRange(period, base) {
 
 /** 周期偏移后的基准日期（offset: 0=当前, -1=上一个, 1=下一个） */
 function shiftedBase(period, offset) {
+  if (period === 'calendar') period = 'month'; // 日历按月翻页
   const b = new Date();
   if (period === 'day') b.setDate(b.getDate() + offset);
   else if (period === 'week') b.setDate(b.getDate() + offset * 7);
@@ -235,6 +237,7 @@ function shiftedBase(period, offset) {
 
 /** 周期文字标签 */
 function periodLabel(period, base) {
+  if (period === 'calendar') period = 'month'; // 日历标题同月
   const { start, end } = periodRange(period, base);
   const md = d => `${d.getMonth() + 1}/${d.getDate()}`;
   if (period === 'day') return `${dateKey(start)} ${WEEKDAYS_CN[start.getDay()]}`;
